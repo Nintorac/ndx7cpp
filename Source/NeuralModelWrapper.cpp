@@ -1,7 +1,9 @@
 #include "NeuralModelWrapper.h"
+#include "EmbeddedModelLoader.h"
 #include <random>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 NeuralModelWrapper::NeuralModelWrapper()
 {
@@ -18,40 +20,61 @@ bool NeuralModelWrapper::loadModelFromFile()
     }
     
     try {
-        // Try to load model from external file
-        std::string modelPath = "models/dx7_vae_model.pt";
+        // First try to load from embedded compressed model
+        std::cout << "Loading neural model from embedded data\n";
+        auto modelData = EmbeddedModelLoader::loadCompressedModel();
         
-        // Check if file exists and is readable
-        std::ifstream file(modelPath, std::ios::binary);
-        if (!file.good()) {
-            std::cerr << "Model file not found or not readable at: " << modelPath << "\n";
-            return false;
-        }
-        file.close();
+        // Create a stringstream from the decompressed data
+        std::stringstream modelStream(std::string(modelData.begin(), modelData.end()));
         
-        // Load the model
-        std::cout << "Loading neural model from: " << modelPath << "\n";
-        model = torch::jit::load(modelPath);
+        // Load model from the stream
+        model = torch::jit::load(modelStream);
         model.eval();
         modelLoaded = true;
         
-        std::cout << "Neural model loaded successfully\n";
+        std::cout << "Neural model loaded successfully from embedded data (" 
+                  << modelData.size() << " bytes)\n";
         return true;
     }
-    catch (const c10::Error& e) {
-        std::cerr << "PyTorch error loading model: " << e.what() << "\n";
-        modelLoaded = false;
-        return false;
-    }
     catch (const std::exception& e) {
-        std::cerr << "Failed to load model from file: " << e.what() << "\n";
-        modelLoaded = false;
-        return false;
-    }
-    catch (...) {
-        std::cerr << "Unknown error occurred while loading model\n";
-        modelLoaded = false;
-        return false;
+        std::cerr << "Failed to load embedded model: " << e.what() << "\n";
+        
+        // Fallback to external file
+        try {
+            std::string modelPath = "models/dx7_vae_model.pt";
+            
+            // Check if file exists and is readable
+            std::ifstream file(modelPath, std::ios::binary);
+            if (!file.good()) {
+                std::cerr << "Model file not found or not readable at: " << modelPath << "\n";
+                return false;
+            }
+            file.close();
+            
+            // Load the model
+            std::cout << "Loading neural model from fallback file: " << modelPath << "\n";
+            model = torch::jit::load(modelPath);
+            model.eval();
+            modelLoaded = true;
+            
+            std::cout << "Neural model loaded successfully from file\n";
+            return true;
+        }
+        catch (const c10::Error& e) {
+            std::cerr << "PyTorch error loading model: " << e.what() << "\n";
+            modelLoaded = false;
+            return false;
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Failed to load model from file: " << e.what() << "\n";
+            modelLoaded = false;
+            return false;
+        }
+        catch (...) {
+            std::cerr << "Unknown error occurred while loading model\n";
+            modelLoaded = false;
+            return false;
+        }
     }
 }
 

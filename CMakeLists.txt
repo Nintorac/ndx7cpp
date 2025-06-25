@@ -18,6 +18,9 @@ add_subdirectory(JUCE)
 find_package(Torch REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
+# Add zlib for decompression
+find_package(ZLIB REQUIRED)
+
 # Create the plugin target
 juce_add_plugin(ND7MidiDevice
     COMPANY_NAME "ND7"
@@ -40,6 +43,7 @@ target_sources(ND7MidiDevice
         Source/DX7VoicePacker.cpp
         Source/NeuralModelWrapper.cpp
         Source/MidiGenerator.cpp
+        Source/EmbeddedModelLoader.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/model_data.h)
 
 # Link libraries
@@ -50,6 +54,7 @@ target_link_libraries(ND7MidiDevice
         juce::juce_audio_devices
         juce::juce_gui_basics
         "${TORCH_LIBRARIES}"
+        ZLIB::ZLIB
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
@@ -63,19 +68,29 @@ target_compile_definitions(ND7MidiDevice PRIVATE
 # Include directories
 target_include_directories(ND7MidiDevice PRIVATE Source ${CMAKE_CURRENT_BINARY_DIR} ${GTK3_INCLUDE_DIRS} ${WEBKIT2GTK_INCLUDE_DIRS})
 
-# Create binary resource from model file
-function(create_binary_resource input_file output_file variable_name)
+# Create compressed binary resource from model file
+function(create_compressed_binary_resource input_file output_file variable_name)
+    get_filename_component(input_basename ${input_file} NAME)
+    set(compressed_file ${CMAKE_CURRENT_BINARY_DIR}/${input_basename}.gz)
+    
+    add_custom_command(
+        OUTPUT ${compressed_file}
+        COMMAND gzip -9 -c ${input_file} > ${compressed_file}
+        DEPENDS ${input_file}
+        COMMENT "Compressing ${input_file}"
+    )
+    
     add_custom_command(
         OUTPUT ${output_file}
-        COMMAND xxd -i ${input_file} > ${output_file}
-        DEPENDS ${input_file}
-        COMMENT "Creating binary resource from ${input_file}"
+        COMMAND cd ${CMAKE_CURRENT_BINARY_DIR} && xxd -i ${input_basename}.gz > model_data.h
+        DEPENDS ${compressed_file}
+        COMMENT "Creating compressed binary resource from ${compressed_file}"
     )
 endfunction()
 
-# Embed model as binary resource
-create_binary_resource(
+# Embed compressed model as binary resource
+create_compressed_binary_resource(
     ${CMAKE_CURRENT_SOURCE_DIR}/models/dx7_vae_model.pt
     ${CMAKE_CURRENT_BINARY_DIR}/model_data.h
-    dx7_vae_model_pt
+    dx7_vae_model_pt_gz
 )
