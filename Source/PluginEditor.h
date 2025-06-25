@@ -3,13 +3,13 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
 
-class ND7MidiDeviceEditor : public juce::AudioProcessorEditor,
+class NeuralDX7PatchGeneratorEditor : public juce::AudioProcessorEditor,
                             public juce::Slider::Listener,
                             public juce::Button::Listener
 {
 public:
-    ND7MidiDeviceEditor (ND7MidiDeviceProcessor&);
-    ~ND7MidiDeviceEditor() override;
+    NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGeneratorProcessor&);
+    ~NeuralDX7PatchGeneratorEditor() override;
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -18,7 +18,7 @@ public:
     void buttonClicked (juce::Button* button) override;
 
 private:
-    ND7MidiDeviceProcessor& audioProcessor;
+    NeuralDX7PatchGeneratorProcessor& audioProcessor;
     
     std::vector<std::unique_ptr<juce::Slider>> latentSliders;
     std::vector<std::unique_ptr<juce::Label>> latentLabels;
@@ -29,5 +29,5 @@ private:
     
     void updateLatentValues();
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ND7MidiDeviceEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NeuralDX7PatchGeneratorEditor)
 };

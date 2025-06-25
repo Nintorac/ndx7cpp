@@ -1,11 +1,11 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-ND7MidiDeviceEditor::ND7MidiDeviceEditor (ND7MidiDeviceProcessor& p)
+NeuralDX7PatchGeneratorEditor::NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGeneratorProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
     // Create title label
-    titleLabel = std::make_unique<juce::Label>("title", "ND7 Neural DX7 MIDI Generator");
+    titleLabel = std::make_unique<juce::Label>("title", "NeuralDX7 Patch Generator");
     titleLabel->setFont(juce::Font(20.0f, juce::Font::bold));
     titleLabel->setJustificationType(juce::Justification::centred);
     addAndMakeVisible(*titleLabel);
@@ -41,11 +41,11 @@ ND7MidiDeviceEditor::ND7MidiDeviceEditor (ND7MidiDeviceProcessor& p)
     setSize (600, 400);
 }
 
-ND7MidiDeviceEditor::~ND7MidiDeviceEditor()
+NeuralDX7PatchGeneratorEditor::~NeuralDX7PatchGeneratorEditor()
 {
 }
 
-void ND7MidiDeviceEditor::paint (juce::Graphics& g)
+void NeuralDX7PatchGeneratorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
     
@@ -57,7 +57,7 @@ void ND7MidiDeviceEditor::paint (juce::Graphics& g)
                10, 350, getWidth() - 20, 20, juce::Justification::centred);
 }
 
-void ND7MidiDeviceEditor::resized()
+void NeuralDX7PatchGeneratorEditor::resized()
 {
     auto bounds = getLocalBounds();
     
@@ -86,12 +86,12 @@ void ND7MidiDeviceEditor::resized()
     randomizeButton->setBounds(buttonArea.reduced(10));
 }
 
-void ND7MidiDeviceEditor::sliderValueChanged(juce::Slider* slider)
+void NeuralDX7PatchGeneratorEditor::sliderValueChanged(juce::Slider* slider)
 {
     updateLatentValues();
 }
 
-void ND7MidiDeviceEditor::buttonClicked(juce::Button* button)
+void NeuralDX7PatchGeneratorEditor::buttonClicked(juce::Button* button)
 {
     if (button == generateButton.get()) {
         std::cout << "Generate & Send button clicked!" << std::endl;
@@ -107,7 +107,7 @@ void ND7MidiDeviceEditor::buttonClicked(juce::Button* button)
     }
 }
 
-void ND7MidiDeviceEditor::updateLatentValues()
+void NeuralDX7PatchGeneratorEditor::updateLatentValues()
 {
     std::vector<float> values;
     values.reserve(NeuralModelWrapper::LATENT_DIM);

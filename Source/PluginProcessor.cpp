@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-ND7MidiDeviceProcessor::ND7MidiDeviceProcessor()
+NeuralDX7PatchGeneratorProcessor::NeuralDX7PatchGeneratorProcessor()
      : AudioProcessor (BusesProperties()
                      #if ! JucePlugin_IsMidiEffect
                       #if ! JucePlugin_IsSynth
@@ -14,16 +14,16 @@ ND7MidiDeviceProcessor::ND7MidiDeviceProcessor()
     latentVector.resize(NeuralModelWrapper::LATENT_DIM, 0.0f);
 }
 
-ND7MidiDeviceProcessor::~ND7MidiDeviceProcessor()
+NeuralDX7PatchGeneratorProcessor::~NeuralDX7PatchGeneratorProcessor()
 {
 }
 
-const juce::String ND7MidiDeviceProcessor::getName() const
+const juce::String NeuralDX7PatchGeneratorProcessor::getName() const
 {
     return JucePlugin_Name;
 }
 
-bool ND7MidiDeviceProcessor::acceptsMidi() const
+bool NeuralDX7PatchGeneratorProcessor::acceptsMidi() const
 {
    #if JucePlugin_WantsMidiInput
     return true;
@@ -32,7 +32,7 @@ bool ND7MidiDeviceProcessor::acceptsMidi() const
    #endif
 }
 
-bool ND7MidiDeviceProcessor::producesMidi() const
+bool NeuralDX7PatchGeneratorProcessor::producesMidi() const
 {
    #if JucePlugin_ProducesMidiOutput
     return true;
@@ -41,7 +41,7 @@ bool ND7MidiDeviceProcessor::producesMidi() const
    #endif
 }
 
-bool ND7MidiDeviceProcessor::isMidiEffect() const
+bool NeuralDX7PatchGeneratorProcessor::isMidiEffect() const
 {
    #if JucePlugin_IsMidiEffect
     return true;
@@ -50,44 +50,44 @@ bool ND7MidiDeviceProcessor::isMidiEffect() const
    #endif
 }
 
-double ND7MidiDeviceProcessor::getTailLengthSeconds() const
+double NeuralDX7PatchGeneratorProcessor::getTailLengthSeconds() const
 {
     return 0.0;
 }
 
-int ND7MidiDeviceProcessor::getNumPrograms()
+int NeuralDX7PatchGeneratorProcessor::getNumPrograms()
 {
     return 1;
 }
 
-int ND7MidiDeviceProcessor::getCurrentProgram()
+int NeuralDX7PatchGeneratorProcessor::getCurrentProgram()
 {
     return 0;
 }
 
-void ND7MidiDeviceProcessor::setCurrentProgram (int index)
+void NeuralDX7PatchGeneratorProcessor::setCurrentProgram (int index)
 {
 }
 
-const juce::String ND7MidiDeviceProcessor::getProgramName (int index)
+const juce::String NeuralDX7PatchGeneratorProcessor::getProgramName (int index)
 {
     return {};
 }
 
-void ND7MidiDeviceProcessor::changeProgramName (int index, const juce::String& newName)
+void NeuralDX7PatchGeneratorProcessor::changeProgramName (int index, const juce::String& newName)
 {
 }
 
-void ND7MidiDeviceProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void NeuralDX7PatchGeneratorProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
 }
 
-void ND7MidiDeviceProcessor::releaseResources()
+void NeuralDX7PatchGeneratorProcessor::releaseResources()
 {
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool ND7MidiDeviceProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool NeuralDX7PatchGeneratorProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
   #if JucePlugin_IsMidiEffect
     juce::ignoreUnused (layouts);
@@ -107,7 +107,7 @@ bool ND7MidiDeviceProcessor::isBusesLayoutSupported (const BusesLayout& layouts)
 }
 #endif
 
-void ND7MidiDeviceProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void NeuralDX7PatchGeneratorProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
@@ -117,17 +117,17 @@ void ND7MidiDeviceProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
         buffer.clear (i, 0, buffer.getNumSamples());
 }
 
-bool ND7MidiDeviceProcessor::hasEditor() const
+bool NeuralDX7PatchGeneratorProcessor::hasEditor() const
 {
     return true;
 }
 
-juce::AudioProcessorEditor* ND7MidiDeviceProcessor::createEditor()
+juce::AudioProcessorEditor* NeuralDX7PatchGeneratorProcessor::createEditor()
 {
-    return new ND7MidiDeviceEditor (*this);
+    return new NeuralDX7PatchGeneratorEditor (*this);
 }
 
-void ND7MidiDeviceProcessor::getStateInformation (juce::MemoryBlock& destData)
+void NeuralDX7PatchGeneratorProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     juce::MemoryOutputStream stream(destData, true);
     
@@ -136,7 +136,7 @@ void ND7MidiDeviceProcessor::getStateInformation (juce::MemoryBlock& destData)
     }
 }
 
-void ND7MidiDeviceProcessor::setStateInformation (const void* data, int sizeInBytes)
+void NeuralDX7PatchGeneratorProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     juce::MemoryInputStream stream(data, static_cast<size_t>(sizeInBytes), false);
     
@@ -145,7 +145,7 @@ void ND7MidiDeviceProcessor::setStateInformation (const void* data, int sizeInBy
     }
 }
 
-void ND7MidiDeviceProcessor::generateAndSendMidi()
+void NeuralDX7PatchGeneratorProcessor::generateAndSendMidi()
 {
     std::cout << "generateAndSendMidi() called" << std::endl;
     
@@ -182,14 +182,14 @@ void ND7MidiDeviceProcessor::generateAndSendMidi()
     }
 }
 
-void ND7MidiDeviceProcessor::setLatentValues(const std::vector<float>& values)
+void NeuralDX7PatchGeneratorProcessor::setLatentValues(const std::vector<float>& values)
 {
     if (values.size() == NeuralModelWrapper::LATENT_DIM) {
         latentVector = values;
     }
 }
 
-void ND7MidiDeviceProcessor::sendMidiSysEx(const std::vector<uint8_t>& sysexData)
+void NeuralDX7PatchGeneratorProcessor::sendMidiSysEx(const std::vector<uint8_t>& sysexData)
 {
     std::cout << "sendMidiSysEx() called with " << sysexData.size() << " bytes" << std::endl;
     
@@ -222,5 +222,5 @@ void ND7MidiDeviceProcessor::sendMidiSysEx(const std::vector<uint8_t>& sysexData
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new ND7MidiDeviceProcessor();
+    return new NeuralDX7PatchGeneratorProcessor();
 }

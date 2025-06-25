@@ -5,11 +5,11 @@
 #include "NeuralModelWrapper.h"
 #include "DX7VoicePacker.h"
 
-class ND7MidiDeviceProcessor : public juce::AudioProcessor
+class NeuralDX7PatchGeneratorProcessor : public juce::AudioProcessor
 {
 public:
-    ND7MidiDeviceProcessor();
-    ~ND7MidiDeviceProcessor() override;
+    NeuralDX7PatchGeneratorProcessor();
+    ~NeuralDX7PatchGeneratorProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -49,5 +49,5 @@ private:
     
     void sendMidiSysEx(const std::vector<uint8_t>& sysexData);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ND7MidiDeviceProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NeuralDX7PatchGeneratorProcessor)
 };
