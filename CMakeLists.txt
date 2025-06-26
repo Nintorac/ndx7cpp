@@ -60,7 +60,7 @@ juce_add_plugin(NeuralDX7PatchGenerator
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE NinA
     PLUGIN_CODE NeuD
-    FORMATS AU VST3 Standalone
+    FORMATS Standalone
     PRODUCT_NAME "NeuralDX7PatchGenerator")
 
 # Override standalone binary location to be in Release/ instead of Release/Standalone/
