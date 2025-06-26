@@ -7,7 +7,7 @@ BUILD_DIR ?= build
 MODEL_FILE ?= models/dx7_vae_model.pt
 
 # Build configuration
-CMAKE_FLAGS = -DCMAKE_PREFIX_PATH=$(LIBTORCH_PATH) -DCMAKE_BUILD_TYPE=Release
+CMAKE_FLAGS = -DCMAKE_PREFIX_PATH=$(LIBTORCH_PATH) -DCMAKE_BUILD_TYPE=Release -DCMAKE_FIND_LIBRARY_SUFFIXES=".a;.so"
 MAKE_FLAGS = -j$(shell nproc)
 
 .PHONY: all clean setup build install deps model help
@@ -102,7 +102,7 @@ clean:
 download-libtorch:
 	@if [ ! -d "$(LIBTORCH_PATH)" ]; then \
 		echo "Downloading LibTorch..."; \
-		wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.4.0%2Bcpu.zip; \
+		wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-static-with-deps-1.4.0%2Bcpu.zip; \
 		unzip libtorch-*.zip; \
 		sudo mv libtorch $(LIBTORCH_PATH); \
 		rm libtorch-*.zip; \
@@ -123,8 +123,7 @@ run: build
 # Package for distribution
 package: build
 	@echo "Creating distribution package..."
-	mkdir -p dist
-	cp -r $(BUILD_DIR)/ND7MidiDevice_artefacts/* dist/
-	tar -czf nd7-midi-device.tar.gz dist/
-	@echo "Package created: nd7-midi-device.tar.gz"
+	tar -czf nd7-neural-dx7.tar.gz -C $(BUILD_DIR) NeuralDX7PatchGenerator_artefacts/
+	@echo "Package created: nd7-neural-dx7.tar.gz"
+	@echo "Libtorch libraries automatically included via RPATH"
 
