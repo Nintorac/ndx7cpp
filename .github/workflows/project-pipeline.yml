@@ -11,6 +11,7 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    if: false
 
     steps:
     - uses: actions/checkout@v4
@@ -33,6 +34,9 @@ jobs:
         if [ "$GITHUB_REF_TYPE" == "tag" ]; then
             echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
             echo "BUILD_VERSION=${GITHUB_REF_NAME:1}" >> "$GITHUB_ENV"
+        elif [ "$GITHUB_REF_NAME" == "main" ]; then
+            echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
+            echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
         else
             echo "BUILD_TYPE=Debug" >> "$GITHUB_ENV"
             echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
@@ -108,46 +112,56 @@ jobs:
   #         build/NeuralDX7PatchGenerator_artefacts/Release/NeuralDX7PatchGenerator
   #         build/NeuralDX7PatchGenerator_artefacts/Release/lib/*
 
-  # build-windows:
-  #   runs-on: windows-latest
-  #   if: false  # Disabled for now
-  #
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #     with:
-  #         submodules: recursive
-  #
-  #   - name: Download and Setup LibTorch
-  #     run: |
-  #       Invoke-WebRequest -Uri "https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-1.4.0%2Bcpu.zip" -OutFile "libtorch.zip"
-  #       Expand-Archive -Path "libtorch.zip" -DestinationPath "C:\"
-  #       Remove-Item "libtorch.zip"
-  #
-  #   - name: Create Model File (dummy for CI)
-  #     run: |
-  #       New-Item -ItemType Directory -Force -Path "models"
-  #       Set-Content -Path "models/dx7_vae_model.pt" -Value "dummy model content"
-  #
-  #   - name: Set build type
-  #     shell: bash
-  #     run: |
-  #       if [ "$GITHUB_REF_TYPE" == "tag" ]; then
-  #           echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
-  #           echo "BUILD_VERSION=${GITHUB_REF_NAME:1}" >> "$GITHUB_ENV"
-  #       else
-  #           echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
-  #           echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
-  #       fi
-  #
-  #   - name: Build
-  #     run: |
-  #       cmake -B build -DCMAKE_PREFIX_PATH=C:/libtorch -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
-  #       cmake --build build --config ${{ env.BUILD_TYPE }} --target NeuralDX7PatchGenerator_Standalone
-  #
-  #   - name: Upload Artifacts
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: windows-bin
-  #       path: |
-  #         build/NeuralDX7PatchGenerator_artefacts/Release/NeuralDX7PatchGenerator.exe
-  #         build/NeuralDX7PatchGenerator_artefacts/Release/lib/*
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+          submodules: recursive
+          lfs: true
+
+    - name: Set build type
+      shell: bash
+      run: |
+        if [ "$GITHUB_REF_TYPE" == "tag" ]; then
+            echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
+            echo "BUILD_VERSION=${GITHUB_REF_NAME:1}" >> "$GITHUB_ENV"
+        elif [ "$GITHUB_REF_NAME" == "main" ]; then
+            echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
+            echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
+        else
+            echo "BUILD_TYPE=Debug" >> "$GITHUB_ENV"
+            echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
+        fi
+        echo "BUILD PARM =========="
+        cat $GITHUB_ENV
+
+    - name: Install Dependencies
+      shell: bash
+      run: make deps
+
+    - name: Download LibTorch
+      shell: bash
+      run: make download-libtorch
+
+    - name: Setup JUCE
+      shell: bash
+      run: make setup
+
+    - name: Build
+      shell: bash
+      run: make build
+
+    - name: Show
+      shell: cmd
+      run: dir /s ${{github.workspace}}\build
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-bin
+        path: |
+          ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/NeuralDX7PatchGenerator.exe
+          ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/lib/
+          !**/*.a

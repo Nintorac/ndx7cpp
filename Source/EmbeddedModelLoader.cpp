@@ -1,6 +1,7 @@
 #include "EmbeddedModelLoader.h"
 #include "model_data.h"
 #include <iostream>
+#include <string>
 
 std::vector<char> EmbeddedModelLoader::loadCompressedModel() {
     extern unsigned char dx7_vae_model_pt_gz[];
@@ -16,56 +17,29 @@ std::vector<char> EmbeddedModelLoader::loadCompressedModel() {
 
 std::vector<char> EmbeddedModelLoader::decompressGzip(const unsigned char* compressed_data, 
                                                      size_t compressed_size) {
-    // Start with a reasonable buffer size
-    size_t buffer_size = compressed_size * 4;
-    std::vector<char> output(buffer_size);
+    // Create memory input stream from compressed data
+    juce::MemoryInputStream memoryStream(compressed_data, compressed_size, false);
     
-    z_stream stream = {};
-    stream.next_in = const_cast<Bytef*>(compressed_data);
-    stream.avail_in = static_cast<uInt>(compressed_size);
-    stream.next_out = reinterpret_cast<Bytef*>(output.data());
-    stream.avail_out = static_cast<uInt>(output.size());
+    // Create GZIP decompressor
+    juce::GZIPDecompressorInputStream gzipStream(&memoryStream, false);
     
-    // Initialize for gzip decompression (windowBits = 15 + 16 for gzip)
-    int result = inflateInit2(&stream, 15 + 16);
-    if (result != Z_OK) {
-        throw std::runtime_error("Failed to initialize zlib: " + std::to_string(result));
-    }
+    // Read all decompressed data
+    std::vector<char> output;
+    const int bufferSize = 4096;
+    char buffer[bufferSize];
     
-    // Decompress
-    result = inflate(&stream, Z_FINISH);
-    
-    if (result == Z_BUF_ERROR && stream.avail_out == 0) {
-        // Need more output space, try with larger buffer
-        inflateEnd(&stream);
-        
-        buffer_size *= 2;
-        output.resize(buffer_size);
-        
-        // Restart decompression
-        stream = {};
-        stream.next_in = const_cast<Bytef*>(compressed_data);
-        stream.avail_in = static_cast<uInt>(compressed_size);
-        stream.next_out = reinterpret_cast<Bytef*>(output.data());
-        stream.avail_out = static_cast<uInt>(output.size());
-        
-        result = inflateInit2(&stream, 15 + 16);
-        if (result != Z_OK) {
-            throw std::runtime_error("Failed to reinitialize zlib: " + std::to_string(result));
+    while (!gzipStream.isExhausted()) {
+        int bytesRead = gzipStream.read(buffer, bufferSize);
+        if (bytesRead > 0) {
+            output.insert(output.end(), buffer, buffer + bytesRead);
+        } else {
+            break;
         }
-        
-        result = inflate(&stream, Z_FINISH);
     }
     
-    if (result != Z_STREAM_END) {
-        inflateEnd(&stream);
-        throw std::runtime_error("Decompression failed: " + std::to_string(result));
+    if (output.empty()) {
+        throw std::runtime_error("Failed to decompress GZIP data");
     }
     
-    // Resize to actual decompressed size
-    size_t actual_size = output.size() - stream.avail_out;
-    output.resize(actual_size);
-    
-    inflateEnd(&stream);
     return output;
 }

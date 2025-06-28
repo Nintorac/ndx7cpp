@@ -1,14 +1,42 @@
 # ND7 MIDI Device Makefile
 
+BUILD_TYPE ?= Debug
+# Detect OS
+UNAME_S := $(shell uname -s)
+ifeq ($(OS),Windows_NT)
+    DETECTED_OS := Windows
+    LIBTORCH_PATH ?= C:/libtorch
+    ifeq ($(BUILD_TYPE),Debug)
+        LIBTORCH_URL := https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-debug-1.4.0.zip
+    else
+        LIBTORCH_URL := https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-1.4.0.zip
+    endif
+    UNZIP_CMD := unzip
+    MOVE_CMD := mv
+else
+    DETECTED_OS := $(UNAME_S)
+    LIBTORCH_PATH ?= /usr/local/libtorch
+    LIBTORCH_URL := https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-static-with-deps-1.4.0%2Bcpu.zip
+    UNZIP_CMD := unzip
+    MOVE_CMD := sudo mv
+endif
+
 # Default paths - override with environment variables if needed
-LIBTORCH_PATH ?= /usr/local/libtorch
 JUCE_PATH ?= ./JUCE
 BUILD_DIR ?= build
 MODEL_FILE ?= models/dx7_vae_model.pt
 
 # Build configuration
-CMAKE_FLAGS = -DCMAKE_PREFIX_PATH=$(LIBTORCH_PATH) -DCMAKE_BUILD_TYPE=Release -DCMAKE_FIND_LIBRARY_SUFFIXES=".a;.so"
-MAKE_FLAGS = -j$(shell nproc)
+CMAKE_FLAGS = -DCMAKE_PREFIX_PATH=$(LIBTORCH_PATH) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
+ifeq ($(DETECTED_OS),Linux)
+    CMAKE_FLAGS += -DCMAKE_FIND_LIBRARY_SUFFIXES=".a;.so"
+    MAKE_FLAGS = -j$(shell nproc)
+else ifeq ($(DETECTED_OS),Windows)
+    CMAKE_FLAGS += -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+    MAKE_FLAGS = --parallel $(shell nproc)
+else
+    MAKE_FLAGS = -j$(shell sysctl -n hw.ncpu)
+endif
 
 .PHONY: all clean setup build install deps model help
 
@@ -51,9 +79,10 @@ model:
 	fi
 	@echo "Model file found: $(MODEL_FILE)"
 
-# Install system dependencies (Ubuntu/Debian)
+# Install system dependencies
 deps:
-	@echo "Installing system dependencies..."
+ifeq ($(DETECTED_OS),Linux)
+	@echo "Installing Linux system dependencies..."
 	sudo apt-get update
 	sudo apt-get install -y \
 		build-essential \
@@ -74,7 +103,14 @@ deps:
 		libwebkit2gtk-4.1-dev \
 		libglu1-mesa-dev \
 		mesa-common-dev \
-		libgtk-3-dev
+		libgtk-3-dev \
+		libharfbuzz-dev
+else ifeq ($(DETECTED_OS),Windows)
+	@echo "Installing Windows dependencies via vcpkg..."
+	vcpkg install zlib:x64-windows
+else
+	@echo "Dependencies not configured for this OS"
+endif
 
 # Configure with CMake
 $(BUILD_DIR)/Makefile: CMakeLists.txt
@@ -85,7 +121,11 @@ $(BUILD_DIR)/Makefile: CMakeLists.txt
 # Build the project
 build: $(BUILD_DIR)/Makefile
 	@echo "Building ND7 MIDI Device..."
+ifeq ($(DETECTED_OS),Windows)
+	cd $(BUILD_DIR) && cmake --build . --config $(BUILD_TYPE) $(MAKE_FLAGS)
+else
 	cd $(BUILD_DIR) && make $(MAKE_FLAGS)
+endif
 	@echo "Build complete! Binaries are in $(BUILD_DIR)/"
 
 # Install built plugins
@@ -101,11 +141,14 @@ clean:
 # Download LibTorch (if not present)
 download-libtorch:
 	@if [ ! -d "$(LIBTORCH_PATH)" ]; then \
-		echo "Downloading LibTorch..."; \
-		wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-static-with-deps-1.4.0%2Bcpu.zip; \
-		unzip libtorch-*.zip; \
-		sudo mv libtorch $(LIBTORCH_PATH); \
-		rm libtorch-*.zip; \
+		echo "Downloading LibTorch for $(DETECTED_OS) ($(BUILD_TYPE) build)..."; \
+		echo "URL: $(LIBTORCH_URL)"; \
+		curl -L -o libtorch.zip $(LIBTORCH_URL); \
+		$(UNZIP_CMD) libtorch.zip; \
+		$(MOVE_CMD) libtorch $(LIBTORCH_PATH); \
+		rm libtorch.zip; \
+	else \
+		echo "LibTorch already exists at $(LIBTORCH_PATH)"; \
 	fi
 
 # Create dummy model for testing
