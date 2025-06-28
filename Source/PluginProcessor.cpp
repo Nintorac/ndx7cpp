@@ -1,6 +1,11 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <filesystem>
+#endif
+
 NeuralDX7PatchGeneratorProcessor::NeuralDX7PatchGeneratorProcessor()
      : AudioProcessor (BusesProperties()
                      #if ! JucePlugin_IsMidiEffect
@@ -11,6 +16,20 @@ NeuralDX7PatchGeneratorProcessor::NeuralDX7PatchGeneratorProcessor()
                      #endif
                        )
 {
+#ifdef _WIN32
+    // Set DLL search path to include lib/ subdirectory for LibTorch DLLs
+    HMODULE hModule = GetModuleHandle(NULL);
+    if (hModule) {
+        WCHAR exePath[MAX_PATH];
+        if (GetModuleFileNameW(hModule, exePath, MAX_PATH)) {
+            std::filesystem::path libPath = std::filesystem::path(exePath).parent_path() / "lib";
+            if (std::filesystem::exists(libPath)) {
+                SetDllDirectoryW(libPath.c_str());
+            }
+        }
+    }
+#endif
+
     latentVector.resize(NeuralModelWrapper::LATENT_DIM, 0.0f);
 }
 

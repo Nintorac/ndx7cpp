@@ -141,7 +141,14 @@ std::vector<int> NeuralModelWrapper::logitsToParameters(const torch::Tensor& log
     
     // Convert to vector of ints
     std::vector<int> parameters;
+#ifdef _WIN32
+    // Windows: Convert to int32 to avoid linker issues with long type
+    paramTensor = paramTensor.to(torch::kInt32);
+    auto accessor = paramTensor.accessor<int, 1>();
+#else
+    // Linux: Use long type (works fine)
     auto accessor = paramTensor.accessor<long, 1>();
+#endif
     
     for (int i = 0; i < accessor.size(0); ++i) {
         parameters.push_back(static_cast<int>(accessor[i]));
