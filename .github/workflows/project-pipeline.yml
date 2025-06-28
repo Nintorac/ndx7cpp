@@ -44,15 +44,15 @@ jobs:
       run: make build
 
     - name: Show Build Output
-      run: ls -lR build/NeuralDX7PatchGenerator_artefacts/
+      run: ls -lR ${{github.workspace}}/build
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: linux-bin
         path: |
-          build/NeuralDX7PatchGenerator_artefacts/Release/NeuralDX7PatchGenerator
-          build/NeuralDX7PatchGenerator_artefacts/Release/lib/
+          ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/NeuralDX7PatchGenerator
+          ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/lib/
           !**/*.a
 
   # build-macos:
