@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 #include <stdexcept>
-#include <zlib.h>
+#include <juce_core/juce_core.h>
 
 class EmbeddedModelLoader {
 public:
