@@ -1,6 +1,7 @@
 #include "EmbeddedModelLoader.h"
 #include "model_data.h"
 #include <iostream>
+#include <string>
 
 std::vector<char> EmbeddedModelLoader::loadCompressedModel() {
     extern unsigned char dx7_vae_model_pt_gz[];

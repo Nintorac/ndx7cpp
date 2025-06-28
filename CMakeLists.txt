@@ -4,12 +4,13 @@ project(NeuralDX7PatchGenerator VERSION 0.0.1)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Find required packages
-find_package(PkgConfig REQUIRED)
-
-# Find GTK3 and webkit2gtk
-pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
-pkg_check_modules(WEBKIT2GTK REQUIRED webkit2gtk-4.1)
+# Find required packages (Linux only)
+if(UNIX AND NOT APPLE)
+    find_package(PkgConfig REQUIRED)
+    # Find GTK3 and webkit2gtk
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+    pkg_check_modules(WEBKIT2GTK REQUIRED webkit2gtk-4.1)
+endif()
 
 # Add JUCE
 add_subdirectory(JUCE)
@@ -31,8 +32,10 @@ foreach(lib IN ITEMS torch c10 mkldnn protobuf onnx gloo fbgemm cpuinfo clog pth
     endif()
 endforeach()
 
-# Static linking flags
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+# Static linking flags (GCC/Clang only)
+if(NOT MSVC)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+endif()
 
 # Set RPATH for remaining dynamic dependencies
 set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
@@ -45,9 +48,10 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # Add zlib for decompression
 find_package(ZLIB REQUIRED)
 
-# Find harfbuzz for text rendering
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(HARFBUZZ REQUIRED harfbuzz)
+# Find harfbuzz for text rendering (Linux only)
+if(UNIX AND NOT APPLE)
+    pkg_check_modules(HARFBUZZ REQUIRED harfbuzz)
+endif()
 
 # Create the plugin target
 juce_add_plugin(NeuralDX7PatchGenerator
@@ -63,9 +67,17 @@ juce_add_plugin(NeuralDX7PatchGenerator
     FORMATS Standalone
     PRODUCT_NAME "NeuralDX7PatchGenerator")
 
-# Override standalone binary location to be in Release/ instead of Release/Standalone/
-set_target_properties(NeuralDX7PatchGenerator_Standalone PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/Release")
+# Override standalone binary location to be in ${CMAKE_BUILD_TYPE}/ instead of ${CMAKE_BUILD_TYPE}/Standalone/
+if(WIN32)
+    # Windows (multi-config generator)
+    set_target_properties(NeuralDX7PatchGenerator_Standalone PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/Debug"
+        RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/Release")
+else()
+    # Linux (single-config generator)  
+    set_target_properties(NeuralDX7PatchGenerator_Standalone PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}")
+endif()
 
 # Add source files
 target_sources(NeuralDX7PatchGenerator
@@ -85,16 +97,21 @@ target_link_libraries(NeuralDX7PatchGenerator
         juce::juce_audio_processors
         juce::juce_audio_devices
         juce::juce_gui_basics
-        ${TORCH_STATIC_LIBRARIES}
         "${TORCH_LIBRARIES}"
         ZLIB::ZLIB
-        ${HARFBUZZ_LIBRARIES}
         ${CMAKE_DL_LIBS}
-        pthread
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
+
+# Add platform-specific libraries
+if(UNIX AND NOT APPLE)
+    target_link_libraries(NeuralDX7PatchGenerator PRIVATE
+        ${TORCH_STATIC_LIBRARIES}
+        ${HARFBUZZ_LIBRARIES}
+        pthread)
+endif()
 
 # Set RPATH to look for libraries in lib/ subdirectory
 set_target_properties(NeuralDX7PatchGenerator PROPERTIES
@@ -102,19 +119,37 @@ set_target_properties(NeuralDX7PatchGenerator PROPERTIES
     INSTALL_RPATH "$ORIGIN/lib")
 
 # Copy libtorch libraries to lib subfolder after build
-add_custom_command(TARGET NeuralDX7PatchGenerator POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-        "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/Release/lib"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_PREFIX_PATH}/lib/libtorch.so"
-        "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/Release/lib/libtorch.so"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_PREFIX_PATH}/lib/libc10.so"
-        "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/Release/lib/libc10.so"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_PREFIX_PATH}/lib/libgomp-753e6e92.so.1"
-        "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/Release/lib/libgomp-753e6e92.so.1"
-    COMMENT "Copying libtorch libraries to Release/lib directory")
+if(UNIX AND NOT APPLE)
+    # Linux: Copy .so files
+    add_custom_command(TARGET NeuralDX7PatchGenerator POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_PREFIX_PATH}/lib/libtorch.so"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/libtorch.so"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_PREFIX_PATH}/lib/libc10.so"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/libc10.so"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_PREFIX_PATH}/lib/libgomp-753e6e92.so.1"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/libgomp-753e6e92.so.1"
+        COMMENT "Copying libtorch libraries to ${CMAKE_BUILD_TYPE}/lib directory")
+elseif(WIN32)
+    # Windows: Copy essential .dll files
+    add_custom_command(TARGET NeuralDX7PatchGenerator POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "C:/libtorch/lib/torch.dll"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/torch.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "C:/libtorch/lib/c10.dll"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/c10.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "C:/libtorch/lib/libiomp5md.dll"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/libiomp5md.dll"
+        COMMENT "Copying essential libtorch DLLs to ${CMAKE_BUILD_TYPE}/lib directory")
+endif()
 
 # Disable JUCE networking features to avoid curl dependency
 target_compile_definitions(NeuralDX7PatchGenerator PRIVATE 
