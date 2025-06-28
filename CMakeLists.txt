@@ -32,8 +32,14 @@ foreach(lib IN ITEMS torch c10 mkldnn protobuf onnx gloo fbgemm cpuinfo clog pth
     endif()
 endforeach()
 
-# Static linking flags (GCC/Clang only)
-if(NOT MSVC)
+# Static linking flags
+if(MSVC)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+    else()
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+    endif()
+else()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
 endif()
 
@@ -45,8 +51,8 @@ set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-# Add zlib for decompression
-find_package(ZLIB REQUIRED)
+# Use JUCE's built-in zlib instead of external package
+# find_package(ZLIB REQUIRED)
 
 # Find harfbuzz for text rendering (Linux only)
 if(UNIX AND NOT APPLE)
@@ -98,7 +104,6 @@ target_link_libraries(NeuralDX7PatchGenerator
         juce::juce_audio_devices
         juce::juce_gui_basics
         "${TORCH_LIBRARIES}"
-        ZLIB::ZLIB
         ${CMAKE_DL_LIBS}
     PUBLIC
         juce::juce_recommended_config_flags

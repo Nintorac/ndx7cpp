@@ -33,6 +33,9 @@ jobs:
         if [ "$GITHUB_REF_TYPE" == "tag" ]; then
             echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
             echo "BUILD_VERSION=${GITHUB_REF_NAME:1}" >> "$GITHUB_ENV"
+        elif [ "$GITHUB_REF_NAME" == "main" ]; then
+            echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
+            echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
         else
             echo "BUILD_TYPE=Debug" >> "$GITHUB_ENV"
             echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
@@ -123,6 +126,9 @@ jobs:
         if [ "$GITHUB_REF_TYPE" == "tag" ]; then
             echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
             echo "BUILD_VERSION=${GITHUB_REF_NAME:1}" >> "$GITHUB_ENV"
+        elif [ "$GITHUB_REF_NAME" == "main" ]; then
+            echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
+            echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
         else
             echo "BUILD_TYPE=Debug" >> "$GITHUB_ENV"
             echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
