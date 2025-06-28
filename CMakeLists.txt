@@ -153,6 +153,9 @@ elseif(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "C:/Windows/System32/vcruntime140.dll"
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/vcruntime140.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "C:/Windows/System32/vcruntime140_1.dll"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/vcruntime140_1.dll"
         COMMENT "Copying libtorch DLLs and runtime libraries to ${CMAKE_BUILD_TYPE}/lib directory")
 endif()
 
