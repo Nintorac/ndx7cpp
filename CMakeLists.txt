@@ -32,14 +32,8 @@ foreach(lib IN ITEMS torch c10 mkldnn protobuf onnx gloo fbgemm cpuinfo clog pth
     endif()
 endforeach()
 
-# Static linking flags
-if(MSVC)
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
-    else()
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
-    endif()
-else()
+# Static linking flags (GCC/Clang only)
+if(NOT MSVC)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
 endif()
 
@@ -153,7 +147,13 @@ elseif(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "C:/libtorch/lib/libiomp5md.dll"
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/libiomp5md.dll"
-        COMMENT "Copying essential libtorch DLLs to ${CMAKE_BUILD_TYPE}/lib directory")
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "C:/Windows/System32/msvcp140.dll"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/msvcp140.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "C:/Windows/System32/vcruntime140.dll"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/vcruntime140.dll"
+        COMMENT "Copying libtorch DLLs and runtime libraries to ${CMAKE_BUILD_TYPE}/lib directory")
 endif()
 
 # Disable JUCE networking features to avoid curl dependency
