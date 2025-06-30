@@ -201,6 +201,37 @@ void NeuralDX7PatchGeneratorProcessor::generateAndSendMidi()
     }
 }
 
+void NeuralDX7PatchGeneratorProcessor::generateRandomVoicesAndSend()
+{
+    std::cout << "generateRandomVoicesAndSend() called" << std::endl;
+    
+    if (!neuralModel.isModelLoaded()) {
+        std::cout << "Neural model not loaded, attempting to load..." << std::endl;
+        if (!neuralModel.loadModelFromFile()) {
+            std::cout << "Failed to load neural model!" << std::endl;
+            return;
+        }
+    }
+    
+    std::cout << "Generating 32 random voices..." << std::endl;
+    auto voices = neuralModel.generateMultipleRandomVoices();
+    
+    if (voices.empty()) {
+        std::cout << "Failed to generate voices!" << std::endl;
+        return;
+    }
+    
+    std::cout << "Generated " << voices.size() << " voices, packing into SysEx..." << std::endl;
+    auto sysexData = DX7VoicePacker::packBulkDump(voices);
+    
+    if (!sysexData.empty()) {
+        std::cout << "SysEx data packed successfully, sending..." << std::endl;
+        sendMidiSysEx(sysexData);
+    } else {
+        std::cout << "Failed to pack SysEx data!" << std::endl;
+    }
+}
+
 void NeuralDX7PatchGeneratorProcessor::setLatentValues(const std::vector<float>& values)
 {
     if (values.size() == NeuralModelWrapper::LATENT_DIM) {

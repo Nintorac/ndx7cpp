@@ -20,6 +20,7 @@ public:
     bool loadModelFromFile();
     std::vector<DX7VoicePacker::Voice> generateVoices(const std::vector<float>& latentVector);
     std::vector<DX7VoicePacker::Voice> generateRandomVoices();
+    std::vector<DX7VoicePacker::Voice> generateMultipleRandomVoices();
     
     bool isModelLoaded() const { return modelLoaded; }
     

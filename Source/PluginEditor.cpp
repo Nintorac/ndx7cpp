@@ -1,15 +1,9 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-NeuralDX7PatchGeneratorEditor::NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGeneratorProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+CustomiseTab::CustomiseTab(NeuralDX7PatchGeneratorProcessor& processor)
+    : audioProcessor(processor)
 {
-    // Create title label
-    titleLabel = std::make_unique<juce::Label>("title", "NeuralDX7 Patch Generator");
-    titleLabel->setFont(juce::Font(20.0f, juce::Font::bold));
-    titleLabel->setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(*titleLabel);
-    
     // Create latent dimension sliders
     latentSliders.resize(NeuralModelWrapper::LATENT_DIM);
     latentLabels.resize(NeuralModelWrapper::LATENT_DIM);
@@ -36,33 +30,26 @@ NeuralDX7PatchGeneratorEditor::NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGene
     randomizeButton = std::make_unique<juce::TextButton>("Randomize");
     randomizeButton->addListener(this);
     addAndMakeVisible(*randomizeButton);
-    
-    // Call setSize() LAST after all components are initialized
-    setSize (600, 400);
 }
 
-NeuralDX7PatchGeneratorEditor::~NeuralDX7PatchGeneratorEditor()
+CustomiseTab::~CustomiseTab()
 {
 }
 
-void NeuralDX7PatchGeneratorEditor::paint (juce::Graphics& g)
+void CustomiseTab::paint(juce::Graphics& g)
 {
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
     
-    g.setColour (juce::Colours::white);
-    g.setFont (12.0f);
+    g.setColour(juce::Colours::white);
+    g.setFont(12.0f);
     
-    // Draw some info text
     g.drawText("Control the neural model's latent space to generate DX7 patches", 
-               10, 350, getWidth() - 20, 20, juce::Justification::centred);
+               10, getHeight() - 30, getWidth() - 20, 20, juce::Justification::centred);
 }
 
-void NeuralDX7PatchGeneratorEditor::resized()
+void CustomiseTab::resized()
 {
     auto bounds = getLocalBounds();
-    
-    // Title
-    titleLabel->setBounds(bounds.removeFromTop(40).reduced(10));
     
     bounds.removeFromTop(10); // spacing
     
@@ -86,12 +73,12 @@ void NeuralDX7PatchGeneratorEditor::resized()
     randomizeButton->setBounds(buttonArea.reduced(10));
 }
 
-void NeuralDX7PatchGeneratorEditor::sliderValueChanged(juce::Slider* slider)
+void CustomiseTab::sliderValueChanged(juce::Slider* slider)
 {
     updateLatentValues();
 }
 
-void NeuralDX7PatchGeneratorEditor::buttonClicked(juce::Button* button)
+void CustomiseTab::buttonClicked(juce::Button* button)
 {
     if (button == generateButton.get()) {
         std::cout << "Generate & Send button clicked!" << std::endl;
@@ -107,7 +94,7 @@ void NeuralDX7PatchGeneratorEditor::buttonClicked(juce::Button* button)
     }
 }
 
-void NeuralDX7PatchGeneratorEditor::updateLatentValues()
+void CustomiseTab::updateLatentValues()
 {
     std::vector<float> values;
     values.reserve(NeuralModelWrapper::LATENT_DIM);
@@ -117,4 +104,85 @@ void NeuralDX7PatchGeneratorEditor::updateLatentValues()
     }
     
     audioProcessor.setLatentValues(values);
+}
+
+RandomiseTab::RandomiseTab(NeuralDX7PatchGeneratorProcessor& processor)
+    : audioProcessor(processor)
+{
+    randomiseButton = std::make_unique<juce::TextButton>("Randomise");
+    randomiseButton->addListener(this);
+    addAndMakeVisible(*randomiseButton);
+}
+
+RandomiseTab::~RandomiseTab()
+{
+}
+
+void RandomiseTab::paint(juce::Graphics& g)
+{
+    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+}
+
+void RandomiseTab::resized()
+{
+    auto bounds = getLocalBounds();
+    auto buttonBounds = bounds.withSizeKeepingCentre(200, 50);
+    randomiseButton->setBounds(buttonBounds);
+}
+
+void RandomiseTab::buttonClicked(juce::Button* button)
+{
+    if (button == randomiseButton.get()) {
+        std::cout << "Randomise button clicked!" << std::endl;
+        audioProcessor.generateRandomVoicesAndSend();
+    }
+}
+
+NeuralDX7PatchGeneratorEditor::NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGeneratorProcessor& p)
+    : AudioProcessorEditor (&p), audioProcessor (p)
+{
+    // Create title label
+    titleLabel = std::make_unique<juce::Label>("title", "NeuralDX7 Patch Generator");
+    titleLabel->setFont(juce::Font(20.0f, juce::Font::bold));
+    titleLabel->setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(*titleLabel);
+    
+    // Create tabs
+    customiseTab = std::make_unique<CustomiseTab>(audioProcessor);
+    randomiseTab = std::make_unique<RandomiseTab>(audioProcessor);
+    
+    // Create tabbed component
+    tabbedComponent = std::make_unique<juce::TabbedComponent>(juce::TabbedButtonBar::TabsAtTop);
+    tabbedComponent->setLookAndFeel(&customLookAndFeel);
+    tabbedComponent->addTab("Randomise", juce::Colours::lightgrey, randomiseTab.get(), false);
+    tabbedComponent->addTab("Customise", juce::Colours::lightgrey, customiseTab.get(), false);
+    tabbedComponent->setTabBarDepth(30);
+    
+    addAndMakeVisible(*tabbedComponent);
+    
+    // Call setSize() LAST after all components are initialized
+    setSize (600, 400);
+}
+
+NeuralDX7PatchGeneratorEditor::~NeuralDX7PatchGeneratorEditor()
+{
+    tabbedComponent->setLookAndFeel(nullptr);
+}
+
+void NeuralDX7PatchGeneratorEditor::paint (juce::Graphics& g)
+{
+    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+}
+
+void NeuralDX7PatchGeneratorEditor::resized()
+{
+    auto bounds = getLocalBounds();
+    
+    // Title
+    titleLabel->setBounds(bounds.removeFromTop(40).reduced(10));
+    
+    bounds.removeFromTop(5); // spacing
+    
+    // Tabbed component takes the rest of the space
+    tabbedComponent->setBounds(bounds);
 }

@@ -40,6 +40,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     void generateAndSendMidi();
+    void generateRandomVoicesAndSend();
     void setLatentValues(const std::vector<float>& values);
 
 private:

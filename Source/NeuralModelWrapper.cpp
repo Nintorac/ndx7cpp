@@ -134,6 +134,44 @@ std::vector<DX7VoicePacker::Voice> NeuralModelWrapper::generateRandomVoices()
     return generateVoices(latentVector);
 }
 
+std::vector<DX7VoicePacker::Voice> NeuralModelWrapper::generateMultipleRandomVoices()
+{
+    if (!modelLoaded && !loadModelFromFile()) {
+        return {};
+    }
+    
+    try {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::normal_distribution<float> dis(0.0f, 1.0f);
+        
+        // Create tensor with different random latent vectors for each voice
+        torch::Tensor z = torch::randn({N_VOICES, LATENT_DIM});
+        
+        // Generate parameters using the model
+        std::vector<torch::jit::IValue> inputs;
+        inputs.push_back(z);
+        
+        torch::Tensor logits = model.forward(inputs).toTensor();
+        
+        // Convert logits to parameters and then to voices
+        std::vector<DX7VoicePacker::Voice> voices;
+        voices.reserve(N_VOICES);
+        
+        for (int i = 0; i < N_VOICES; ++i) {
+            torch::Tensor voiceLogits = logits[i];
+            auto parameters = logitsToParameters(voiceLogits);
+            voices.push_back(parametersToVoice(parameters));
+        }
+        
+        return voices;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error generating multiple random voices: " << e.what() << "\n";
+        return {};
+    }
+}
+
 std::vector<int> NeuralModelWrapper::logitsToParameters(const torch::Tensor& logits)
 {
     // Apply argmax to get the most likely parameter values
