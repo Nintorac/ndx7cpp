@@ -7,14 +7,7 @@
 #endif
 
 NeuralDX7PatchGeneratorProcessor::NeuralDX7PatchGeneratorProcessor()
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
-                       )
+     : AudioProcessor (BusesProperties())
 {
 #ifdef _WIN32
     // Set DLL search path to include lib/ subdirectory for LibTorch DLLs
@@ -31,6 +24,7 @@ NeuralDX7PatchGeneratorProcessor::NeuralDX7PatchGeneratorProcessor()
 #endif
 
     latentVector.resize(NeuralModelWrapper::LATENT_DIM, 0.0f);
+    initializeDefaultMidiOutput();
 }
 
 NeuralDX7PatchGeneratorProcessor::~NeuralDX7PatchGeneratorProcessor()
@@ -44,11 +38,7 @@ const juce::String NeuralDX7PatchGeneratorProcessor::getName() const
 
 bool NeuralDX7PatchGeneratorProcessor::acceptsMidi() const
 {
-   #if JucePlugin_WantsMidiInput
-    return true;
-   #else
     return false;
-   #endif
 }
 
 bool NeuralDX7PatchGeneratorProcessor::producesMidi() const
@@ -239,35 +229,36 @@ void NeuralDX7PatchGeneratorProcessor::setLatentValues(const std::vector<float>&
     }
 }
 
+void NeuralDX7PatchGeneratorProcessor::initializeDefaultMidiOutput()
+{
+    auto devices = juce::MidiOutput::getAvailableDevices();
+    if (!devices.isEmpty()) {
+        defaultMidiOutput = juce::MidiOutput::openDevice(devices[0].identifier);
+        if (defaultMidiOutput) {
+            std::cout << "Default MIDI output set to: " << devices[0].name << std::endl;
+        } else {
+            std::cout << "Failed to open default MIDI device: " << devices[0].name << std::endl;
+        }
+    } else {
+        std::cout << "No MIDI output devices available!" << std::endl;
+    }
+}
+
 void NeuralDX7PatchGeneratorProcessor::sendMidiSysEx(const std::vector<uint8_t>& sysexData)
 {
     std::cout << "sendMidiSysEx() called with " << sysexData.size() << " bytes" << std::endl;
+    
+    if (!defaultMidiOutput) {
+        std::cout << "No default MIDI output device available!" << std::endl;
+        return;
+    }
     
     juce::MidiMessage sysexMessage = juce::MidiMessage::createSysExMessage(
         sysexData.data(), static_cast<int>(sysexData.size())
     );
     
-    std::cout << "Created MIDI SysEx message" << std::endl;
-    
-    // Send to all connected MIDI outputs
-    auto devices = juce::MidiOutput::getAvailableDevices();
-    std::cout << "Found " << devices.size() << " MIDI output devices:" << std::endl;
-    
-    for (int i = 0; i < devices.size(); ++i) {
-        std::cout << "  Device " << i << ": " << devices[i].name << std::endl;
-        auto device = juce::MidiOutput::openDevice(devices[i].identifier);
-        if (device) {
-            std::cout << "  Successfully opened device: " << devices[i].name << std::endl;
-            device->sendMessageNow(sysexMessage);
-            std::cout << "  Sent SysEx message to: " << devices[i].name << std::endl;
-        } else {
-            std::cout << "  Failed to open device: " << devices[i].name << std::endl;
-        }
-    }
-    
-    if (devices.size() == 0) {
-        std::cout << "No MIDI output devices available!" << std::endl;
-    }
+    defaultMidiOutput->sendMessageNow(sysexMessage);
+    std::cout << "Sent SysEx message to default MIDI device" << std::endl;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
