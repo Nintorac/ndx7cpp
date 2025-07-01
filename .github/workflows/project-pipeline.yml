@@ -162,5 +162,4 @@ jobs:
         name: windows-bin
         path: |
           ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/NeuralDX7PatchGenerator.exe
-          ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/lib/
-          !**/*.a
+          ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/*.dll

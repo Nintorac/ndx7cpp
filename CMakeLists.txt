@@ -4,6 +4,7 @@ project(NeuralDX7PatchGenerator VERSION 0.0.1)
 
 set(CMAKE_CXX_STANDARD 17)
 
+
 # Find required packages (Linux only)
 if(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
@@ -136,29 +137,27 @@ if(UNIX AND NOT APPLE)
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/libgomp-753e6e92.so.1"
         COMMENT "Copying libtorch libraries to ${CMAKE_BUILD_TYPE}/lib directory")
 elseif(WIN32)
-    # Windows: Copy essential .dll files
+    # Windows: Copy essential .dll files to exe directory
     add_custom_command(TARGET NeuralDX7PatchGenerator POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "C:/libtorch/lib/torch.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/torch.dll"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/torch.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "C:/libtorch/lib/c10.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/c10.dll"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/c10.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "C:/libtorch/lib/libiomp5md.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/libiomp5md.dll"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/libiomp5md.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "C:/Windows/System32/msvcp140.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/msvcp140.dll"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/msvcp140.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "C:/Windows/System32/vcruntime140.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/vcruntime140.dll"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/vcruntime140.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "C:/Windows/System32/vcruntime140_1.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/vcruntime140_1.dll"
-        COMMENT "Copying libtorch DLLs and runtime libraries to ${CMAKE_BUILD_TYPE}/lib directory")
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/vcruntime140_1.dll"
+        COMMENT "Copying libtorch DLLs and runtime libraries to ${CMAKE_BUILD_TYPE} directory")
 endif()
 
 # Disable JUCE networking features to avoid curl dependency
