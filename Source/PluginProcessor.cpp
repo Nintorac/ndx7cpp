@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "DX7BulkPacker.h"
+#include "DX7VoicePacker.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -180,14 +182,15 @@ void NeuralDX7PatchGeneratorProcessor::generateAndSendMidi()
         return;
     }
     
-    std::cout << "Generated " << voices.size() << " voices" << std::endl;
+    std::cout << "Generated " << voices.size() << " voices, sending first voice as single voice SysEx" << std::endl;
     
-    auto sysexData = DX7VoicePacker::packBulkDump(voices);
+    // For customise functionality, send just the first voice as a single voice SysEx
+    auto sysexData = DX7VoicePacker::packSingleVoice(voices[0]);
     if (!sysexData.empty()) {
-        std::cout << "Packed SysEx data: " << sysexData.size() << " bytes" << std::endl;
+        std::cout << "Packed single voice SysEx data: " << sysexData.size() << " bytes" << std::endl;
         sendMidiSysEx(sysexData);
     } else {
-        std::cout << "Failed to pack SysEx data!" << std::endl;
+        std::cout << "Failed to pack single voice SysEx data!" << std::endl;
     }
 }
 
@@ -212,7 +215,7 @@ void NeuralDX7PatchGeneratorProcessor::generateRandomVoicesAndSend()
     }
     
     std::cout << "Generated " << voices.size() << " voices, packing into SysEx..." << std::endl;
-    auto sysexData = DX7VoicePacker::packBulkDump(voices);
+    auto sysexData = DX7BulkPacker::packBulkDump(voices);
     
     if (!sysexData.empty()) {
         std::cout << "SysEx data packed successfully, sending..." << std::endl;

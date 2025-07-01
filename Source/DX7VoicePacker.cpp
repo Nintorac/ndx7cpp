@@ -1,45 +1,10 @@
 #include "DX7VoicePacker.h"
 #include <algorithm>
 #include <numeric>
+#include <iostream>
 
-std::vector<uint8_t> DX7VoicePacker::packBulkDump(const std::vector<Voice>& voices)
-{
-    if (voices.size() != N_VOICES) {
-        return {};
-    }
-    
-    std::vector<uint8_t> result;
-    result.reserve(BULK_DUMP_SIZE);
-    
-    // SysEx header
-    result.push_back(0xF0);
-    result.push_back(0x43);  // Yamaha ID
-    result.push_back(0x00);  // Sub-status & channel
-    result.push_back(0x09);  // Format number (32 voices)
-    result.push_back(0x20);  // Byte count MS
-    result.push_back(0x00);  // Byte count LS
-    
-    // Pack all voices
-    for (const auto& voice : voices) {
-        auto voiceData = packSingleVoice(voice);
-        if (voiceData.empty()) {
-            return {};
-        }
-        // Remove the SysEx wrapper for bulk dump
-        result.insert(result.end(), voiceData.begin() + 6, voiceData.end() - 2);
-    }
-    
-    // Calculate and add checksum
-    uint8_t checksum = calculateChecksum(std::vector<uint8_t>(result.begin() + 6, result.end()));
-    result.push_back(checksum);
-    
-    // End SysEx
-    result.push_back(0xF7);
-    
-    return result;
-}
 
-std::vector<uint8_t> DX7VoicePacker::packSingleVoice(const Voice& voice)
+std::vector<uint8_t> DX7VoicePacker::packSingleVoice(const DX7Voice& voice)
 {
     if (!validateParameters(voice)) {
         return {};
@@ -56,13 +21,13 @@ std::vector<uint8_t> DX7VoicePacker::packSingleVoice(const Voice& voice)
     result.push_back(0x01);  // Byte count MS
     result.push_back(0x1B);  // Byte count LS (155 bytes)
     
-    // Pack oscillators (6 oscillators * 17 bytes each = 102 bytes)
-    for (const auto& osc : voice.oscillators) {
-        packOscillator(osc, result);
+    // Pack oscillators in single voice format (6 oscillators * 21 bytes each = 126 bytes)
+    for (const auto& osc : voice.getOscillators()) {
+        packSingleVoiceOscillator(osc, result);
     }
     
-    // Pack global parameters (53 bytes)
-    packGlobal(voice.global, result);
+    // Pack global parameters in single voice format (29 bytes)
+    packSingleVoiceGlobal(voice.getGlobal(), result);
     
     // Calculate and add checksum
     uint8_t checksum = calculateChecksum(std::vector<uint8_t>(result.begin() + 6, result.end()));
@@ -132,25 +97,32 @@ void DX7VoicePacker::packGlobal(const std::array<uint8_t, 29>& global, std::vect
     }
 }
 
-DX7VoicePacker::Voice DX7VoicePacker::unpackSingleVoice(const std::vector<uint8_t>& data)
+DX7Voice DX7VoicePacker::unpackSingleVoice(const std::vector<uint8_t>& data)
 {
-    Voice voice;
+    std::array<std::array<uint8_t, 21>, N_OSC> oscillators;
+    std::array<uint8_t, 29> global;
+    
+    // Initialize with zeros
+    for (auto& osc : oscillators) {
+        osc.fill(0);
+    }
+    global.fill(0);
     
     if (data.size() < VOICE_PARAM_COUNT + 8) {
-        return voice;
+        return DX7Voice(oscillators, global);
     }
     
     const uint8_t* voiceData = data.data() + 6; // Skip SysEx header
     
     // Unpack oscillators
     for (int i = 0; i < N_OSC; ++i) {
-        voice.oscillators[i] = unpackOscillator(voiceData + i * 17);
+        oscillators[i] = unpackOscillator(voiceData + i * 17);
     }
     
     // Unpack global parameters
-    voice.global = unpackGlobal(voiceData + N_OSC * 17);
+    global = unpackGlobal(voiceData + N_OSC * 17);
     
-    return voice;
+    return DX7Voice(oscillators, global);
 }
 
 std::array<uint8_t, 21> DX7VoicePacker::unpackOscillator(const uint8_t* data)
@@ -224,79 +196,79 @@ std::array<uint8_t, 29> DX7VoicePacker::unpackGlobal(const uint8_t* data)
     return global;
 }
 
-bool DX7VoicePacker::validateParameters(const Voice& voice)
+bool DX7VoicePacker::validateParameters(const DX7Voice& voice)
 {
-    // Validate oscillator parameters
-    for (const auto& osc : voice.oscillators) {
-        // R1-R4, L1-L4, BP, LD, RD, OL, FF (0-99)
-        for (int i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 17, 20}) {
-            if (osc[i] > 99) return false;
+    // Use DX7Voice's built-in validation
+    bool isValid = voice.validate();
+    if (!isValid) {
+        std::cerr << "Voice validation failed" << std::endl;
+        // Debug: print some parameter values
+        const auto& oscs = voice.getOscillators();
+        const auto& global = voice.getGlobal();
+        std::cerr << "Sample osc[0] params: ";
+        for (int i = 0; i < 5; ++i) {
+            std::cerr << (int)oscs[0][i] << " ";
         }
-        
-        // RC, LC (0-3)
-        if (osc[11] > 3 || osc[12] > 3) return false;
-        
-        // DET (0-14)
-        if (osc[13] > 14) return false;
-        
-        // RS (0-7)
-        if (osc[14] > 7) return false;
-        
-        // KVS (0-7)
-        if (osc[15] > 7) return false;
-        
-        // AMS (0-3)
-        if (osc[16] > 3) return false;
-        
-        // FC (0-31)
-        if (osc[18] > 31) return false;
-        
-        // M (0-1)
-        if (osc[19] > 1) return false;
+        std::cerr << "\nSample global params: ";
+        for (int i = 0; i < 5; ++i) {
+            std::cerr << (int)global[i] << " ";
+        }
+        std::cerr << std::endl;
     }
-    
-    // Validate global parameters
-    // PR1-PR4, PL1-PL4 (0-99)
-    for (int i = 0; i < 8; ++i) {
-        if (voice.global[i] > 99) return false;
-    }
-    
-    // ALG (0-31)
-    if (voice.global[8] > 31) return false;
-    
-    // OKS (0-1)
-    if (voice.global[9] > 1) return false;
-    
-    // FB (0-7)
-    if (voice.global[10] > 7) return false;
-    
-    // LFS, LFD, LPMD, LAMD (0-99)
-    for (int i = 11; i < 15; ++i) {
-        if (voice.global[i] > 99) return false;
-    }
-    
-    // LPMS (0-7)
-    if (voice.global[15] > 7) return false;
-    
-    // LFW (0-5)
-    if (voice.global[16] > 5) return false;
-    
-    // LKS (0-1)
-    if (voice.global[17] > 1) return false;
-    
-    // TRNSP (0-48)
-    if (voice.global[18] > 48) return false;
-    
-    // NAME (0-127)
-    for (int i = 19; i < 29; ++i) {
-        if (voice.global[i] > 127) return false;
-    }
-    
-    return true;
+    return isValid;
 }
 
 uint8_t DX7VoicePacker::calculateChecksum(const std::vector<uint8_t>& data)
 {
     uint32_t sum = std::accumulate(data.begin(), data.end(), 0u);
     return (128 - (sum & 127)) % 128;
+}
+
+void DX7VoicePacker::packSingleVoiceOscillator(const std::array<uint8_t, 21>& osc, std::vector<uint8_t>& output)
+{
+    // Convert from bulk dump order to single voice dump order
+    // Bulk dump order: R1,R2,R3,R4,L1,L2,L3,L4,BP,LD,RD,RC,LC,DET,RS,KVS,AMS,OL,FC,M,FF
+    // Single voice order: R1,R2,R3,R4,L1,L2,L3,L4,BP,LD,RD,LC,RC,RS,AMS,KVS,OL,M,FC,FF,DET
+    
+    // R1-R4, L1-L4, BP, LD, RD (positions 0-10 same in both)
+    for (int i = 0; i < 11; ++i) {
+        output.push_back(osc[i] & 0x7F);
+    }
+    
+    // LC, RC (swapped: bulk has RC,LC at 11,12, single voice has LC,RC at 11,12)
+    output.push_back(osc[12] & 0x7F);  // LC (bulk pos 12 -> single pos 11)
+    output.push_back(osc[11] & 0x7F);  // RC (bulk pos 11 -> single pos 12)
+    
+    // RS (bulk pos 14 -> single pos 13)
+    output.push_back(osc[14] & 0x7F);
+    
+    // AMS (bulk pos 16 -> single pos 14)
+    output.push_back(osc[16] & 0x7F);
+    
+    // KVS (bulk pos 15 -> single pos 15)
+    output.push_back(osc[15] & 0x7F);
+    
+    // OL (bulk pos 17 -> single pos 16)
+    output.push_back(osc[17] & 0x7F);
+    
+    // M (bulk pos 19 -> single pos 17)
+    output.push_back(osc[19] & 0x7F);
+    
+    // FC (bulk pos 18 -> single pos 18)
+    output.push_back(osc[18] & 0x7F);
+    
+    // FF (bulk pos 20 -> single pos 19)
+    output.push_back(osc[20] & 0x7F);
+    
+    // DET (bulk pos 13 -> single pos 20)
+    output.push_back(osc[13] & 0x7F);
+}
+
+void DX7VoicePacker::packSingleVoiceGlobal(const std::array<uint8_t, 29>& global, std::vector<uint8_t>& output)
+{
+    // Global parameters have the same order in both bulk dump and single voice dump
+    // So we can just copy them directly
+    for (int i = 0; i < 29; ++i) {
+        output.push_back(global[i] & 0x7F);
+    }
 }

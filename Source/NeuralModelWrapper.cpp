@@ -1,5 +1,6 @@
 #include "NeuralModelWrapper.h"
 #include "EmbeddedModelLoader.h"
+#include "DX7Voice.h"
 #include <random>
 #include <iostream>
 #include <fstream>
@@ -78,7 +79,7 @@ bool NeuralModelWrapper::loadModelFromFile()
     }
 }
 
-std::vector<DX7VoicePacker::Voice> NeuralModelWrapper::generateVoices(const std::vector<float>& latentVector)
+std::vector<DX7Voice> NeuralModelWrapper::generateVoices(const std::vector<float>& latentVector)
 {
     if (!modelLoaded && !loadModelFromFile()) {
         return {};
@@ -99,13 +100,13 @@ std::vector<DX7VoicePacker::Voice> NeuralModelWrapper::generateVoices(const std:
         torch::Tensor logits = model.forward(inputs).toTensor();
         
         // Convert logits to parameters and then to voices
-        std::vector<DX7VoicePacker::Voice> voices;
+        std::vector<DX7Voice> voices;
         voices.reserve(N_VOICES);
         
         for (int i = 0; i < N_VOICES; ++i) {
             torch::Tensor voiceLogits = logits[i];
-            auto parameters = logitsToParameters(voiceLogits);
-            voices.push_back(parametersToVoice(parameters));
+            auto parameters = DX7Voice::logitsToParameters(voiceLogits);
+            voices.push_back(DX7Voice::fromParameters(parameters));
         }
         
         return voices;
@@ -116,7 +117,7 @@ std::vector<DX7VoicePacker::Voice> NeuralModelWrapper::generateVoices(const std:
     }
 }
 
-std::vector<DX7VoicePacker::Voice> NeuralModelWrapper::generateRandomVoices()
+std::vector<DX7Voice> NeuralModelWrapper::generateRandomVoices()
 {
     if (!modelLoaded && !loadModelFromFile()) {
         return {};
@@ -134,7 +135,7 @@ std::vector<DX7VoicePacker::Voice> NeuralModelWrapper::generateRandomVoices()
     return generateVoices(latentVector);
 }
 
-std::vector<DX7VoicePacker::Voice> NeuralModelWrapper::generateMultipleRandomVoices()
+std::vector<DX7Voice> NeuralModelWrapper::generateMultipleRandomVoices()
 {
     if (!modelLoaded && !loadModelFromFile()) {
         return {};
@@ -155,13 +156,13 @@ std::vector<DX7VoicePacker::Voice> NeuralModelWrapper::generateMultipleRandomVoi
         torch::Tensor logits = model.forward(inputs).toTensor();
         
         // Convert logits to parameters and then to voices
-        std::vector<DX7VoicePacker::Voice> voices;
+        std::vector<DX7Voice> voices;
         voices.reserve(N_VOICES);
         
         for (int i = 0; i < N_VOICES; ++i) {
             torch::Tensor voiceLogits = logits[i];
-            auto parameters = logitsToParameters(voiceLogits);
-            voices.push_back(parametersToVoice(parameters));
+            auto parameters = DX7Voice::logitsToParameters(voiceLogits);
+            voices.push_back(DX7Voice::fromParameters(parameters));
         }
         
         return voices;
@@ -172,50 +173,3 @@ std::vector<DX7VoicePacker::Voice> NeuralModelWrapper::generateMultipleRandomVoi
     }
 }
 
-std::vector<int> NeuralModelWrapper::logitsToParameters(const torch::Tensor& logits)
-{
-    // Apply argmax to get the most likely parameter values
-    torch::Tensor paramTensor = logits.argmax(-1);
-    
-    // Convert to vector of ints
-    std::vector<int> parameters;
-#ifdef _WIN32
-    // Windows: Convert to int32 to avoid linker issues with long type
-    paramTensor = paramTensor.to(torch::kInt32);
-    auto accessor = paramTensor.accessor<int, 1>();
-#else
-    // Linux: Use long type (works fine)
-    auto accessor = paramTensor.accessor<long, 1>();
-#endif
-    
-    for (int i = 0; i < accessor.size(0); ++i) {
-        parameters.push_back(static_cast<int>(accessor[i]));
-    }
-    
-    return parameters;
-}
-
-DX7VoicePacker::Voice NeuralModelWrapper::parametersToVoice(const std::vector<int>& parameters)
-{
-    DX7VoicePacker::Voice voice;
-    
-    if (parameters.size() != 155) { // Expected DX7 parameter count
-        return voice;
-    }
-    
-    int paramIndex = 0;
-    
-    // Fill oscillator parameters (6 oscillators * 21 parameters each)
-    for (int osc = 0; osc < 6; ++osc) {
-        for (int param = 0; param < 21; ++param) {
-            voice.oscillators[osc][param] = static_cast<uint8_t>(parameters[paramIndex++]);
-        }
-    }
-    
-    // Fill global parameters (29 parameters)
-    for (int param = 0; param < 29; ++param) {
-        voice.global[param] = static_cast<uint8_t>(parameters[paramIndex++]);
-    }
-    
-    return voice;
-}

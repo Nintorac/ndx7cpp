@@ -1,4 +1,5 @@
 #include "MidiGenerator.h"
+#include "DX7BulkPacker.h"
 #include <iostream>
 
 MidiGenerator::MidiGenerator()
@@ -23,7 +24,7 @@ void MidiGenerator::generateAndSendDX7Patches(const std::vector<float>& latentVe
         return;
     }
     
-    auto sysexData = DX7VoicePacker::packBulkDump(voices);
+    auto sysexData = DX7BulkPacker::packBulkDump(voices);
     if (sysexData.empty()) {
         std::cerr << "Failed to pack DX7 data\n";
         return;
@@ -45,7 +46,7 @@ void MidiGenerator::generateAndSendRandomPatches()
         return;
     }
     
-    auto sysexData = DX7VoicePacker::packBulkDump(voices);
+    auto sysexData = DX7BulkPacker::packBulkDump(voices);
     if (sysexData.empty()) {
         std::cerr << "Failed to pack DX7 data\n";
         return;

@@ -6,7 +6,7 @@
 #include <string>
 #include <memory>
 #include <sstream>
-#include "DX7VoicePacker.h"
+#include "DX7Voice.h"
 
 class NeuralModelWrapper
 {
@@ -18,9 +18,9 @@ public:
     ~NeuralModelWrapper();
     
     bool loadModelFromFile();
-    std::vector<DX7VoicePacker::Voice> generateVoices(const std::vector<float>& latentVector);
-    std::vector<DX7VoicePacker::Voice> generateRandomVoices();
-    std::vector<DX7VoicePacker::Voice> generateMultipleRandomVoices();
+    std::vector<DX7Voice> generateVoices(const std::vector<float>& latentVector);
+    std::vector<DX7Voice> generateRandomVoices();
+    std::vector<DX7Voice> generateMultipleRandomVoices();
     
     bool isModelLoaded() const { return modelLoaded; }
     
@@ -28,6 +28,4 @@ private:
     torch::jit::script::Module model;
     bool modelLoaded = false;
     
-    std::vector<int> logitsToParameters(const torch::Tensor& logits);
-    DX7VoicePacker::Voice parametersToVoice(const std::vector<int>& parameters);
 };
