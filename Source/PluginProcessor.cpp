@@ -9,7 +9,6 @@ NeuralDX7PatchGeneratorProcessor::NeuralDX7PatchGeneratorProcessor()
 {
 
     latentVector.resize(NeuralModelWrapper::LATENT_DIM, 0.0f);
-    initializeDefaultMidiOutput();
 }
 
 NeuralDX7PatchGeneratorProcessor::~NeuralDX7PatchGeneratorProcessor()
@@ -109,6 +108,14 @@ void NeuralDX7PatchGeneratorProcessor::processBlock (juce::AudioBuffer<float>& b
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
+    
+    // Add any pending MIDI messages to the output
+    if (!pendingMidiMessages.isEmpty()) {
+        std::cout << "Processing " << pendingMidiMessages.getNumEvents() << " pending MIDI messages" << std::endl;
+        midiMessages.addEvents(pendingMidiMessages, 0, buffer.getNumSamples(), 0);
+        pendingMidiMessages.clear();
+        std::cout << "MIDI messages added to output buffer" << std::endl;
+    }
 }
 
 bool NeuralDX7PatchGeneratorProcessor::hasEditor() const
@@ -171,7 +178,7 @@ void NeuralDX7PatchGeneratorProcessor::generateAndSendMidi()
     auto sysexData = DX7VoicePacker::packSingleVoice(voices[0]);
     if (!sysexData.empty()) {
         std::cout << "Packed single voice SysEx data: " << sysexData.size() << " bytes" << std::endl;
-        sendMidiSysEx(sysexData);
+        addMidiSysEx(sysexData);
     } else {
         std::cout << "Failed to pack single voice SysEx data!" << std::endl;
     }
@@ -202,7 +209,7 @@ void NeuralDX7PatchGeneratorProcessor::generateRandomVoicesAndSend()
     
     if (!sysexData.empty()) {
         std::cout << "SysEx data packed successfully, sending..." << std::endl;
-        sendMidiSysEx(sysexData);
+        addMidiSysEx(sysexData);
     } else {
         std::cout << "Failed to pack SysEx data!" << std::endl;
     }
@@ -215,36 +222,16 @@ void NeuralDX7PatchGeneratorProcessor::setLatentValues(const std::vector<float>&
     }
 }
 
-void NeuralDX7PatchGeneratorProcessor::initializeDefaultMidiOutput()
+void NeuralDX7PatchGeneratorProcessor::addMidiSysEx(const std::vector<uint8_t>& sysexData)
 {
-    auto devices = juce::MidiOutput::getAvailableDevices();
-    if (!devices.isEmpty()) {
-        defaultMidiOutput = juce::MidiOutput::openDevice(devices[0].identifier);
-        if (defaultMidiOutput) {
-            std::cout << "Default MIDI output set to: " << devices[0].name << std::endl;
-        } else {
-            std::cout << "Failed to open default MIDI device: " << devices[0].name << std::endl;
-        }
-    } else {
-        std::cout << "No MIDI output devices available!" << std::endl;
-    }
-}
-
-void NeuralDX7PatchGeneratorProcessor::sendMidiSysEx(const std::vector<uint8_t>& sysexData)
-{
-    std::cout << "sendMidiSysEx() called with " << sysexData.size() << " bytes" << std::endl;
-    
-    if (!defaultMidiOutput) {
-        std::cout << "No default MIDI output device available!" << std::endl;
-        return;
-    }
+    std::cout << "addMidiSysEx() called with " << sysexData.size() << " bytes" << std::endl;
     
     juce::MidiMessage sysexMessage = juce::MidiMessage::createSysExMessage(
         sysexData.data(), static_cast<int>(sysexData.size())
     );
     
-    defaultMidiOutput->sendMessageNow(sysexMessage);
-    std::cout << "Sent SysEx message to default MIDI device" << std::endl;
+    pendingMidiMessages.addEvent(sysexMessage, 0);
+    std::cout << "Added SysEx message to pending MIDI buffer" << std::endl;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

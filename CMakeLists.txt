@@ -61,6 +61,7 @@ juce_add_plugin(NeuralDX7PatchGenerator
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT TRUE
     IS_MIDI_PLUGIN TRUE
+    IS_MIDI_EFFECT TRUE
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE NinA
@@ -89,7 +90,6 @@ target_sources(NeuralDX7PatchGenerator
         Source/DX7VoicePacker.cpp
         Source/DX7BulkPacker.cpp
         Source/NeuralModelWrapper.cpp
-        Source/MidiGenerator.cpp
         Source/EmbeddedModelLoader.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/model_data.h)
 

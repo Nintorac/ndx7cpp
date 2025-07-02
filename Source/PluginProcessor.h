@@ -47,10 +47,9 @@ private:
     NeuralModelWrapper neuralModel;
     std::vector<float> latentVector;
     juce::Random random;
-    std::unique_ptr<juce::MidiOutput> defaultMidiOutput;
+    juce::MidiBuffer pendingMidiMessages;
     
-    void sendMidiSysEx(const std::vector<uint8_t>& sysexData);
-    void initializeDefaultMidiOutput();
+    void addMidiSysEx(const std::vector<uint8_t>& sysexData);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NeuralDX7PatchGeneratorProcessor)
 };
