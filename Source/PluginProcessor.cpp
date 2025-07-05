@@ -3,6 +3,28 @@
 #include "DX7BulkPacker.h"
 #include "DX7VoicePacker.h"
 
+// Simple debounce timer class
+class DebounceTimer : public juce::Timer
+{
+public:
+    DebounceTimer(std::function<void()> callback) : callback_(callback) {}
+    
+    void timerCallback() override
+    {
+        stopTimer();
+        if (callback_)
+            callback_();
+    }
+    
+    void debounce(int milliseconds)
+    {
+        startTimer(milliseconds);
+    }
+    
+private:
+    std::function<void()> callback_;
+};
+
 
 NeuralDX7PatchGeneratorProcessor::NeuralDX7PatchGeneratorProcessor()
      : AudioProcessor (BusesProperties())
@@ -10,6 +32,12 @@ NeuralDX7PatchGeneratorProcessor::NeuralDX7PatchGeneratorProcessor()
     latentVector.resize(NeuralModelWrapper::LATENT_DIM, 0.0f);
     inferenceEngine = std::make_unique<ThreadedInferenceEngine>();
     inferenceEngine->startInferenceThread();
+    
+    // Create debounce timer for slider changes
+    debounceTimer = std::make_unique<DebounceTimer>([this]() {
+        // Pre-generate voice for current latent vector
+        inferenceEngine->preGenerateCustomVoice(latentVector);
+    });
 }
 
 NeuralDX7PatchGeneratorProcessor::~NeuralDX7PatchGeneratorProcessor()
@@ -156,27 +184,23 @@ void NeuralDX7PatchGeneratorProcessor::generateAndSendMidi()
     std::cout << "generateAndSendMidi() called" << std::endl;
     
     if (!inferenceEngine->isModelLoaded()) {
-        std::cout << "Neural model not loaded yet, request queued" << std::endl;
+        std::cout << "Neural model not loaded yet, request ignored" << std::endl;
+        return;
     }
     
-    std::cout << "Generating voices with latent vector: [";
+    std::cout << "Generating voice with latent vector: [";
     for (size_t i = 0; i < latentVector.size(); ++i) {
         std::cout << latentVector[i];
         if (i < latentVector.size() - 1) std::cout << ", ";
     }
     std::cout << "]" << std::endl;
     
-    // Request custom voices from inference engine
-    inferenceEngine->requestCustomVoices(latentVector, [this](std::vector<DX7Voice> voices) {
-        if (voices.empty()) {
-            std::cout << "No voices generated!" << std::endl;
-            return;
-        }
+    // Use cached request for instant response if available
+    inferenceEngine->requestCachedCustomVoice(latentVector, [this](DX7Voice voice) {
+        std::cout << "Got custom voice, sending as single voice SysEx" << std::endl;
         
-        std::cout << "Generated " << voices.size() << " voices, sending first voice as single voice SysEx" << std::endl;
-        
-        // For customise functionality, send just the first voice as a single voice SysEx
-        auto sysexData = DX7VoicePacker::packSingleVoice(voices[0]);
+        // For customise functionality, send as single voice SysEx
+        auto sysexData = DX7VoicePacker::packSingleVoice(voice);
         if (!sysexData.empty()) {
             std::cout << "Packed single voice SysEx data: " << sysexData.size() << " bytes" << std::endl;
             addMidiSysEx(sysexData);
@@ -217,6 +241,16 @@ void NeuralDX7PatchGeneratorProcessor::setLatentValues(const std::vector<float>&
 {
     if (values.size() == NeuralModelWrapper::LATENT_DIM) {
         latentVector = values;
+        // Trigger debounced pre-generation
+        debouncedPreGeneration();
+    }
+}
+
+void NeuralDX7PatchGeneratorProcessor::debouncedPreGeneration()
+{
+    // Debounce slider changes with 150ms delay
+    if (debounceTimer) {
+        static_cast<DebounceTimer*>(debounceTimer.get())->debounce(150);
     }
 }
 

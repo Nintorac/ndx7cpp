@@ -130,9 +130,24 @@ void ThreadedInferenceEngine::processInferenceRequest(const InferenceRequest& re
                 voices = neuralModel->generateVoices(request.latentVector);
                 break;
             }
+            
+            case InferenceRequest::SINGLE_CUSTOM_VOICE:
+            {
+                std::cout << "ThreadedInferenceEngine: Processing single custom voice request" << std::endl;
+                voices = neuralModel->generateVoices(request.latentVector);
+                
+                // Call single voice callback with first voice
+                if (request.singleCallback && !voices.empty())
+                {
+                    juce::MessageManager::callAsync([callback = request.singleCallback, voice = voices[0]]() {
+                        callback(voice);
+                    });
+                }
+                return;
+            }
         }
         
-        // Call callback on main thread
+        // Call multi-voice callback on main thread
         if (request.callback && !voices.empty())
         {
             juce::MessageManager::callAsync([callback = request.callback, voices]() {
@@ -157,6 +172,13 @@ void ThreadedInferenceEngine::requestCustomVoices(const std::vector<float>& late
 {
     std::unique_lock<std::mutex> lock(requestMutex);
     requestQueue.emplace(InferenceRequest::CUSTOM_VOICES, latentVector, callback);
+    requestCondition.notify_one();
+}
+
+void ThreadedInferenceEngine::requestSingleCustomVoice(const std::vector<float>& latentVector, std::function<void(DX7Voice)> callback)
+{
+    std::unique_lock<std::mutex> lock(requestMutex);
+    requestQueue.emplace(InferenceRequest::SINGLE_CUSTOM_VOICE, latentVector, callback);
     requestCondition.notify_one();
 }
 
@@ -193,6 +215,155 @@ void ThreadedInferenceEngine::preGenerateRandomVoices()
             // Callback is handled in processInferenceRequest
             std::cout << "ThreadedInferenceEngine: Buffer regenerated with " << voices.size() << " voices" << std::endl;
         });
+    }
+}
+
+std::string ThreadedInferenceEngine::latentVectorToKey(const std::vector<float>& latentVector) const
+{
+    std::string key;
+    key.reserve(latentVector.size() * 8); // Rough estimate for string size
+    
+    for (float value : latentVector)
+    {
+        // Round to 3 decimal places to create reasonable cache keys
+        int rounded = static_cast<int>(value * 1000.0f);
+        key += std::to_string(rounded) + ",";
+    }
+    
+    return key;
+}
+
+void ThreadedInferenceEngine::addToCache(const std::vector<float>& latentVector, const DX7Voice& voice)
+{
+    std::unique_lock<std::mutex> lock(cacheMutex);
+    
+    std::string key = latentVectorToKey(latentVector);
+    
+    // If cache is full, evict oldest entry
+    if (voiceCache.size() >= MAX_CACHE_SIZE)
+    {
+        evictOldestFromCache();
+    }
+    
+    // Add new entry
+    voiceCache.emplace(key, voice);
+    cacheOrder.push(key);
+    
+    std::cout << "ThreadedInferenceEngine: Added voice to cache (size: " << voiceCache.size() << ")" << std::endl;
+}
+
+void ThreadedInferenceEngine::evictOldestFromCache()
+{
+    if (!cacheOrder.empty())
+    {
+        std::string oldestKey = cacheOrder.front();
+        cacheOrder.pop();
+        voiceCache.erase(oldestKey);
+        std::cout << "ThreadedInferenceEngine: Evicted oldest cache entry" << std::endl;
+    }
+}
+
+bool ThreadedInferenceEngine::hasCachedVoice(const std::vector<float>& latentVector) const
+{
+    std::unique_lock<std::mutex> lock(cacheMutex);
+    std::string key = latentVectorToKey(latentVector);
+    return voiceCache.find(key) != voiceCache.end();
+}
+
+DX7Voice ThreadedInferenceEngine::getCachedVoice(const std::vector<float>& latentVector) const
+{
+    std::unique_lock<std::mutex> lock(cacheMutex);
+    std::string key = latentVectorToKey(latentVector);
+    auto it = voiceCache.find(key);
+    
+    if (it != voiceCache.end())
+    {
+        std::cout << "ThreadedInferenceEngine: Cache hit for custom voice" << std::endl;
+        return it->second;
+    }
+    
+    std::cerr << "ThreadedInferenceEngine: Warning - requested voice not found in cache" << std::endl;
+    // Return voice with default oscillators and global data
+    std::array<std::array<uint8_t, 21>, 6> defaultOsc{};
+    std::array<uint8_t, 29> defaultGlobal{};
+    return DX7Voice(defaultOsc, defaultGlobal);
+}
+
+void ThreadedInferenceEngine::requestCachedCustomVoice(const std::vector<float>& latentVector, std::function<void(DX7Voice)> callback)
+{
+    // Check cache first
+    if (hasCachedVoice(latentVector))
+    {
+        DX7Voice cachedVoice = getCachedVoice(latentVector);
+        juce::MessageManager::callAsync([callback, cachedVoice]() {
+            callback(cachedVoice);
+        });
+        return;
+    }
+    
+    // Not in cache, generate and cache
+    requestSingleCustomVoice(latentVector, [this, latentVector, callback](DX7Voice voice) {
+        // Add to cache
+        addToCache(latentVector, voice);
+        
+        // Call original callback
+        callback(voice);
+    });
+}
+
+void ThreadedInferenceEngine::preGenerateCustomVoice(const std::vector<float>& latentVector)
+{
+    // Only generate if not already cached
+    if (hasCachedVoice(latentVector))
+    {
+        return;
+    }
+    
+    std::unique_lock<std::mutex> lock(scheduleMutex);
+    
+    // If no request is currently inflight, start one immediately
+    if (!isPreGenerating.load())
+    {
+        isPreGenerating.store(true);
+        lock.unlock(); // Release lock before making request
+        
+        std::cout << "ThreadedInferenceEngine: Pre-generating custom voice for cache" << std::endl;
+        requestSingleCustomVoice(latentVector, [this, latentVector](DX7Voice voice) {
+            // Add to cache for future use
+            addToCache(latentVector, voice);
+            
+            // Check if there's a scheduled request to process
+            std::unique_lock<std::mutex> scheduleLock(scheduleMutex);
+            if (scheduledRequest.has_value())
+            {
+                auto nextRequest = std::move(scheduledRequest.value());
+                scheduledRequest.reset();
+                scheduleLock.unlock();
+                
+                std::cout << "ThreadedInferenceEngine: Processing scheduled request" << std::endl;
+                // Process the scheduled request
+                requestSingleCustomVoice(nextRequest.latentVector, [this, nextRequest](DX7Voice scheduledVoice) {
+                    addToCache(nextRequest.latentVector, scheduledVoice);
+                    isPreGenerating.store(false); // Allow new pre-generation requests
+                    std::cout << "ThreadedInferenceEngine: Scheduled request completed" << std::endl;
+                });
+            }
+            else
+            {
+                isPreGenerating.store(false); // Allow new pre-generation requests
+                std::cout << "ThreadedInferenceEngine: Pre-generated voice cached" << std::endl;
+            }
+        });
+    }
+    else
+    {
+        // Request is inflight, schedule this one (overwriting any previous scheduled request)
+        if (scheduledRequest.has_value()) {
+            std::cout << "ThreadedInferenceEngine: Overwriting previously scheduled request" << std::endl;
+        } else {
+            std::cout << "ThreadedInferenceEngine: Scheduling request to run after current completes" << std::endl;
+        }
+        scheduledRequest = InferenceRequest(InferenceRequest::SINGLE_CUSTOM_VOICE, latentVector, [](DX7Voice){});
     }
 }
 

@@ -85,13 +85,13 @@ std::vector<DX7Voice> NeuralModelWrapper::generateVoices(const std::vector<float
         return {};
     }
     
-    if (latentVector.size() != LATENT_DIM) {
+    if (latentVector.size() % LATENT_DIM != 0) {
         return {};
     }
     
     try {
-        // Create tensor from latent vector
-        torch::Tensor z = torch::tensor(latentVector).unsqueeze(0).repeat({N_VOICES, 1});
+        // Create tensor from latent vector - assume latentVector is already batched correctly
+        torch::Tensor z = torch::tensor(latentVector).view({-1, LATENT_DIM});
         
         // Generate parameters using the model
         std::vector<torch::jit::IValue> inputs;
@@ -99,11 +99,14 @@ std::vector<DX7Voice> NeuralModelWrapper::generateVoices(const std::vector<float
         
         torch::Tensor logits = model.forward(inputs).toTensor();
         
+        // Infer number of voices from the output tensor size
+        int numVoices = logits.size(0);
+        
         // Convert logits to parameters and then to voices
         std::vector<DX7Voice> voices;
-        voices.reserve(N_VOICES);
+        voices.reserve(numVoices);
         
-        for (int i = 0; i < N_VOICES; ++i) {
+        for (int i = 0; i < numVoices; ++i) {
             torch::Tensor voiceLogits = logits[i];
             auto parameters = DX7Voice::logitsToParameters(voiceLogits);
             voices.push_back(DX7Voice::fromParameters(parameters));
@@ -146,26 +149,14 @@ std::vector<DX7Voice> NeuralModelWrapper::generateMultipleRandomVoices()
         std::mt19937 gen(rd());
         std::normal_distribution<float> dis(0.0f, 1.0f);
         
-        // Create tensor with different random latent vectors for each voice
-        torch::Tensor z = torch::randn({N_VOICES, LATENT_DIM});
+        // Create batched latent vectors for multiple voices
+        std::vector<float> batchedLatent(N_VOICES * LATENT_DIM);
         
-        // Generate parameters using the model
-        std::vector<torch::jit::IValue> inputs;
-        inputs.push_back(z);
-        
-        torch::Tensor logits = model.forward(inputs).toTensor();
-        
-        // Convert logits to parameters and then to voices
-        std::vector<DX7Voice> voices;
-        voices.reserve(N_VOICES);
-        
-        for (int i = 0; i < N_VOICES; ++i) {
-            torch::Tensor voiceLogits = logits[i];
-            auto parameters = DX7Voice::logitsToParameters(voiceLogits);
-            voices.push_back(DX7Voice::fromParameters(parameters));
+        for (int i = 0; i < N_VOICES * LATENT_DIM; ++i) {
+            batchedLatent[i] = dis(gen);
         }
         
-        return voices;
+        return generateVoices(batchedLatent);
     }
     catch (const std::exception& e) {
         std::cerr << "Error generating multiple random voices: " << e.what() << "\n";
