@@ -66,7 +66,8 @@ juce_add_plugin(NeuralDX7PatchGenerator
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE NinA
     PLUGIN_CODE NeuD
-    FORMATS Standalone AU
+    FORMATS Standalone VST3 AU
+    VST3_CATEGORIES "Generator Tools"
     PRODUCT_NAME "NeuralDX7PatchGenerator")
 
 # Override standalone binary location to be in ${CMAKE_BUILD_TYPE}/ instead of ${CMAKE_BUILD_TYPE}/Standalone/
@@ -197,7 +198,8 @@ endif()
 # Disable JUCE networking features to avoid curl dependency
 target_compile_definitions(NeuralDX7PatchGenerator PRIVATE 
     JUCE_WEB_BROWSER=0
-    JUCE_USE_CURL=0)
+    JUCE_USE_CURL=0
+    JUCE_VST3_CAN_REPLACE_VST2=0)
 
 # Include directories
 target_include_directories(NeuralDX7PatchGenerator PRIVATE Source ${CMAKE_CURRENT_BINARY_DIR} ${GTK3_INCLUDE_DIRS} ${WEBKIT2GTK_INCLUDE_DIRS})
