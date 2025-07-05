@@ -66,7 +66,7 @@ juce_add_plugin(NeuralDX7PatchGenerator
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE NinA
     PLUGIN_CODE NeuD
-    FORMATS Standalone
+    FORMATS Standalone AU
     PRODUCT_NAME "NeuralDX7PatchGenerator")
 
 # Override standalone binary location to be in ${CMAKE_BUILD_TYPE}/ instead of ${CMAKE_BUILD_TYPE}/Standalone/
@@ -149,8 +149,9 @@ if(UNIX AND NOT APPLE)
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/libgomp-753e6e92.so.1"
         COMMENT "Copying libtorch libraries to ${CMAKE_BUILD_TYPE}/lib directory")
 elseif(APPLE)
-    # macOS: Copy .dylib files into .app bundle Frameworks directory
+    # macOS: Copy .dylib files into both .app bundle and AU component Frameworks directories
     add_custom_command(TARGET NeuralDX7PatchGenerator POST_BUILD
+        # Copy to standalone .app bundle
         COMMAND ${CMAKE_COMMAND} -E make_directory
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.app/Contents/Frameworks"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -159,7 +160,16 @@ elseif(APPLE)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_PREFIX_PATH}/lib/libc10.dylib"
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.app/Contents/Frameworks/libc10.dylib"
-        COMMENT "Copying libtorch libraries to .app bundle Frameworks directory")
+        # Copy to AU component bundle
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.component/Contents/Frameworks"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_PREFIX_PATH}/lib/libtorch.dylib"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.component/Contents/Frameworks/libtorch.dylib"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_PREFIX_PATH}/lib/libc10.dylib"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.component/Contents/Frameworks/libc10.dylib"
+        COMMENT "Copying libtorch libraries to .app and .component bundle Frameworks directories")
 elseif(WIN32)
     # Windows: Copy essential .dll files to exe directory
     add_custom_command(TARGET NeuralDX7PatchGenerator POST_BUILD
