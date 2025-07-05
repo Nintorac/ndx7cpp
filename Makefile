@@ -16,9 +16,14 @@ ifeq ($(OS),Windows_NT)
 else
     DETECTED_OS := $(UNAME_S)
     LIBTORCH_PATH ?= /usr/local/libtorch
-    LIBTORCH_URL := https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-static-with-deps-1.4.0%2Bcpu.zip
+    ifeq ($(DETECTED_OS),Darwin)
+        LIBTORCH_URL := https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.4.0.zip
+        MOVE_CMD := sudo mv
+    else
+        LIBTORCH_URL := https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-static-with-deps-1.4.0%2Bcpu.zip
+        MOVE_CMD := sudo mv
+    endif
     UNZIP_CMD := unzip
-    MOVE_CMD := sudo mv
 endif
 
 # Default paths - override with environment variables if needed
@@ -31,6 +36,9 @@ CMAKE_FLAGS = -DCMAKE_PREFIX_PATH=$(LIBTORCH_PATH) -DCMAKE_BUILD_TYPE=$(BUILD_TY
 ifeq ($(DETECTED_OS),Linux)
     CMAKE_FLAGS += -DCMAKE_FIND_LIBRARY_SUFFIXES=".a;.so"
     MAKE_FLAGS = -j$(shell nproc)
+else ifeq ($(DETECTED_OS),Darwin)
+    CMAKE_FLAGS += -DCMAKE_OSX_ARCHITECTURES="x86_64"
+    MAKE_FLAGS = -j$(shell sysctl -n hw.ncpu)
 else ifeq ($(DETECTED_OS),Windows)
     CMAKE_FLAGS += -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
     MAKE_FLAGS = --parallel $(shell nproc)
@@ -105,6 +113,9 @@ ifeq ($(DETECTED_OS),Linux)
 		mesa-common-dev \
 		libgtk-3-dev \
 		libharfbuzz-dev
+else ifeq ($(DETECTED_OS),Darwin)
+	@echo "Installing macOS system dependencies..."
+	brew install cmake pkg-config harfbuzz
 else ifeq ($(DETECTED_OS),Windows)
 	@echo "Installing Windows dependencies via vcpkg..."
 	vcpkg install zlib:x64-windows

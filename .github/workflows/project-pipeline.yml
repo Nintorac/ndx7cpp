@@ -11,6 +11,7 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    if: false
 
     steps:
     - uses: actions/checkout@v4
@@ -58,61 +59,56 @@ jobs:
           ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/lib/
           !**/*.a
 
-  # build-macos:
-  #   runs-on: macos-latest
-  #   if: false  # Disabled for now
-  #   
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #     with:
-  #        submodules: recursive
-  #
-  #   - name: Install Dependencies
-  #     run: |
-  #       brew install cmake pkg-config harfbuzz
-  #
-  #   - name: Download and Setup LibTorch
-  #     run: |
-  #       wget -q https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.4.0.zip
-  #       unzip -q libtorch-*.zip
-  #       sudo mv libtorch /usr/local/
-  #       rm libtorch-*.zip
-  #
-  #   - name: Create Model File (dummy for CI)
-  #     run: |
-  #       mkdir -p models
-  #       echo "dummy model content" > models/dx7_vae_model.pt
-  #
-  #   - name: Set build type
-  #     shell: bash
-  #     run: |
-  #       if [ "$GITHUB_REF_TYPE" == "tag" ]; then
-  #           echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
-  #           echo "BUILD_VERSION=${GITHUB_REF_NAME:1}" >> "$GITHUB_ENV"
-  #       else
-  #           echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
-  #           echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
-  #       fi
-  #
-  #   - name: Build
-  #     run: |
-  #       mkdir -p build
-  #       cd build && cmake .. \
-  #         -DCMAKE_PREFIX_PATH=/usr/local/libtorch \
-  #         -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-  #         -DCMAKE_FIND_LIBRARY_SUFFIXES=".a;.so"
-  #       make NeuralDX7PatchGenerator_Standalone -j$(sysctl -n hw.ncpu)
-  #
-  #   - name: Upload Artifacts
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: macos-bin
-  #       path: |
-  #         build/NeuralDX7PatchGenerator_artefacts/Release/NeuralDX7PatchGenerator
-  #         build/NeuralDX7PatchGenerator_artefacts/Release/lib/*
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+         submodules: recursive
+         lfs: true
+
+    - name: Install System Dependencies
+      run: make deps
+
+    - name: Download LibTorch
+      run: make download-libtorch
+
+    - name: Setup JUCE
+      run: make setup
+
+    - name: Set build type
+      shell: bash
+      run: |
+        if [ "$GITHUB_REF_TYPE" == "tag" ]; then
+            echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
+            echo "BUILD_VERSION=${GITHUB_REF_NAME:1}" >> "$GITHUB_ENV"
+        elif [ "$GITHUB_REF_NAME" == "main" ]; then
+            echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
+            echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
+        else
+            echo "BUILD_TYPE=Debug" >> "$GITHUB_ENV"
+            echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
+        fi
+        echo "BUILD PARM =========="
+        cat $GITHUB_ENV
+
+    - name: Build
+      run: make build
+
+    - name: Show Build Output
+      run: ls -lR ${{github.workspace}}/build
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-bin
+        path: |
+          ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/NeuralDX7PatchGenerator.app
 
   build-windows:
     runs-on: windows-latest
+    if: false
 
     steps:
     - uses: actions/checkout@v4
@@ -167,7 +163,7 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build-linux, build-windows]
+    needs: [build-linux, build-macos, build-windows]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
@@ -201,6 +197,13 @@ jobs:
           if [ -d "./artifacts/linux-bin" ]; then
             cd artifacts/linux-bin
             zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-linux.zip .
+            cd ../..
+          fi
+          
+          # Create macOS ZIP
+          if [ -d "./artifacts/macos-bin" ]; then
+            cd artifacts/macos-bin
+            zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-macos.zip .
             cd ../..
           fi
 

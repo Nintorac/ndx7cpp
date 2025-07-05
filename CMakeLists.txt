@@ -33,8 +33,8 @@ foreach(lib IN ITEMS torch c10 mkldnn protobuf onnx gloo fbgemm cpuinfo clog pth
     endif()
 endforeach()
 
-# Static linking flags (GCC/Clang only)
-if(NOT MSVC)
+# Static linking flags (GCC only, not supported on macOS clang)
+if(NOT MSVC AND NOT APPLE)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
 endif()
 
@@ -75,6 +75,10 @@ if(WIN32)
     set_target_properties(NeuralDX7PatchGenerator_Standalone PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/Debug"
         RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/Release")
+elseif(APPLE)
+    # macOS (single-config generator with .app bundle)
+    set_target_properties(NeuralDX7PatchGenerator_Standalone PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}")
 else()
     # Linux (single-config generator)  
     set_target_properties(NeuralDX7PatchGenerator_Standalone PROPERTIES
@@ -115,10 +119,18 @@ if(UNIX AND NOT APPLE)
         pthread)
 endif()
 
-# Set RPATH to look for libraries in lib/ subdirectory
-set_target_properties(NeuralDX7PatchGenerator PROPERTIES
-    BUILD_RPATH "$ORIGIN/lib"
-    INSTALL_RPATH "$ORIGIN/lib")
+# Set RPATH to look for libraries in appropriate directory
+if(APPLE)
+    # macOS: Look in the .app bundle Frameworks directory
+    set_target_properties(NeuralDX7PatchGenerator PROPERTIES
+        BUILD_RPATH "@executable_path/../Frameworks"
+        INSTALL_RPATH "@executable_path/../Frameworks")
+else()
+    # Linux: Look in lib/ subdirectory
+    set_target_properties(NeuralDX7PatchGenerator PROPERTIES
+        BUILD_RPATH "$ORIGIN/lib"
+        INSTALL_RPATH "$ORIGIN/lib")
+endif()
 
 # Copy libtorch libraries to lib subfolder after build
 if(UNIX AND NOT APPLE)
@@ -136,6 +148,18 @@ if(UNIX AND NOT APPLE)
             "${CMAKE_PREFIX_PATH}/lib/libgomp-753e6e92.so.1"
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/lib/libgomp-753e6e92.so.1"
         COMMENT "Copying libtorch libraries to ${CMAKE_BUILD_TYPE}/lib directory")
+elseif(APPLE)
+    # macOS: Copy .dylib files into .app bundle Frameworks directory
+    add_custom_command(TARGET NeuralDX7PatchGenerator POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.app/Contents/Frameworks"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_PREFIX_PATH}/lib/libtorch.dylib"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.app/Contents/Frameworks/libtorch.dylib"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_PREFIX_PATH}/lib/libc10.dylib"
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.app/Contents/Frameworks/libc10.dylib"
+        COMMENT "Copying libtorch libraries to .app bundle Frameworks directory")
 elseif(WIN32)
     # Windows: Copy essential .dll files to exe directory
     add_custom_command(TARGET NeuralDX7PatchGenerator POST_BUILD
