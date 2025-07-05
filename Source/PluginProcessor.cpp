@@ -7,12 +7,17 @@
 NeuralDX7PatchGeneratorProcessor::NeuralDX7PatchGeneratorProcessor()
      : AudioProcessor (BusesProperties())
 {
-
     latentVector.resize(NeuralModelWrapper::LATENT_DIM, 0.0f);
+    inferenceEngine = std::make_unique<ThreadedInferenceEngine>();
+    inferenceEngine->startInferenceThread();
 }
 
 NeuralDX7PatchGeneratorProcessor::~NeuralDX7PatchGeneratorProcessor()
 {
+    if (inferenceEngine)
+    {
+        inferenceEngine->stopInferenceThread();
+    }
 }
 
 const juce::String NeuralDX7PatchGeneratorProcessor::getName() const
@@ -150,13 +155,8 @@ void NeuralDX7PatchGeneratorProcessor::generateAndSendMidi()
 {
     std::cout << "generateAndSendMidi() called" << std::endl;
     
-    if (!neuralModel.isModelLoaded()) {
-        std::cout << "Neural model not loaded, attempting to load..." << std::endl;
-        if (!neuralModel.loadModelFromFile()) {
-            std::cout << "Failed to load neural model!" << std::endl;
-            return;
-        }
-        std::cout << "Neural model loaded successfully!" << std::endl;
+    if (!inferenceEngine->isModelLoaded()) {
+        std::cout << "Neural model not loaded yet, request queued" << std::endl;
     }
     
     std::cout << "Generating voices with latent vector: [";
@@ -166,53 +166,51 @@ void NeuralDX7PatchGeneratorProcessor::generateAndSendMidi()
     }
     std::cout << "]" << std::endl;
     
-    auto voices = neuralModel.generateVoices(latentVector);
-    if (voices.empty()) {
-        std::cout << "No voices generated!" << std::endl;
-        return;
-    }
-    
-    std::cout << "Generated " << voices.size() << " voices, sending first voice as single voice SysEx" << std::endl;
-    
-    // For customise functionality, send just the first voice as a single voice SysEx
-    auto sysexData = DX7VoicePacker::packSingleVoice(voices[0]);
-    if (!sysexData.empty()) {
-        std::cout << "Packed single voice SysEx data: " << sysexData.size() << " bytes" << std::endl;
-        addMidiSysEx(sysexData);
-    } else {
-        std::cout << "Failed to pack single voice SysEx data!" << std::endl;
-    }
+    // Request custom voices from inference engine
+    inferenceEngine->requestCustomVoices(latentVector, [this](std::vector<DX7Voice> voices) {
+        if (voices.empty()) {
+            std::cout << "No voices generated!" << std::endl;
+            return;
+        }
+        
+        std::cout << "Generated " << voices.size() << " voices, sending first voice as single voice SysEx" << std::endl;
+        
+        // For customise functionality, send just the first voice as a single voice SysEx
+        auto sysexData = DX7VoicePacker::packSingleVoice(voices[0]);
+        if (!sysexData.empty()) {
+            std::cout << "Packed single voice SysEx data: " << sysexData.size() << " bytes" << std::endl;
+            addMidiSysEx(sysexData);
+        } else {
+            std::cout << "Failed to pack single voice SysEx data!" << std::endl;
+        }
+    });
 }
 
 void NeuralDX7PatchGeneratorProcessor::generateRandomVoicesAndSend()
 {
     std::cout << "generateRandomVoicesAndSend() called" << std::endl;
     
-    if (!neuralModel.isModelLoaded()) {
-        std::cout << "Neural model not loaded, attempting to load..." << std::endl;
-        if (!neuralModel.loadModelFromFile()) {
-            std::cout << "Failed to load neural model!" << std::endl;
+    // Try to use buffered voices first for instant response
+    if (inferenceEngine->hasBufferedRandomVoices()) {
+        std::cout << "Using buffered random voices for instant response" << std::endl;
+        auto voices = inferenceEngine->getBufferedRandomVoices();
+        
+        if (!voices.empty()) {
+            std::cout << "Got " << voices.size() << " buffered voices, packing into SysEx..." << std::endl;
+            auto sysexData = DX7BulkPacker::packBulkDump(voices);
+            
+            if (!sysexData.empty()) {
+                std::cout << "SysEx data packed successfully, sending..." << std::endl;
+                addMidiSysEx(sysexData);
+            } else {
+                std::cout << "Failed to pack SysEx data!" << std::endl;
+            }
             return;
         }
     }
     
-    std::cout << "Generating 32 random voices..." << std::endl;
-    auto voices = neuralModel.generateMultipleRandomVoices();
-    
-    if (voices.empty()) {
-        std::cout << "Failed to generate voices!" << std::endl;
-        return;
-    }
-    
-    std::cout << "Generated " << voices.size() << " voices, packing into SysEx..." << std::endl;
-    auto sysexData = DX7BulkPacker::packBulkDump(voices);
-    
-    if (!sysexData.empty()) {
-        std::cout << "SysEx data packed successfully, sending..." << std::endl;
-        addMidiSysEx(sysexData);
-    } else {
-        std::cout << "Failed to pack SysEx data!" << std::endl;
-    }
+    // If no buffer available, do nothing to prevent weird behavior on rapid clicks
+    std::cout << "No buffered voices available, ignoring request" << std::endl;
 }
 
 void NeuralDX7PatchGeneratorProcessor::setLatentValues(const std::vector<float>& values)
