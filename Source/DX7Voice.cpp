@@ -68,8 +68,8 @@ std::vector<int> DX7Voice::logitsToParameters(const torch::Tensor& logits)
     
     // Convert to vector of ints
     std::vector<int> parameters;
-#ifdef _WIN32
-    // Windows: Convert to int32 to avoid linker issues with long type
+#if defined(_WIN32) || defined(__APPLE__)
+    // Windows and macOS: Convert to int32 to avoid linker issues with long type
     paramTensor = paramTensor.to(torch::kInt32);
     auto accessor = paramTensor.accessor<int, 1>();
 #else
