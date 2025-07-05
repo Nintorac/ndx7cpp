@@ -96,6 +96,7 @@ target_sources(NeuralDX7PatchGenerator
         Source/DX7BulkPacker.cpp
         Source/NeuralModelWrapper.cpp
         Source/EmbeddedModelLoader.cpp
+        Source/ThreadedInferenceEngine.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/model_data.h)
 
 # Link libraries

@@ -4,6 +4,7 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include "NeuralModelWrapper.h"
 #include "DX7VoicePacker.h"
+#include "ThreadedInferenceEngine.h"
 
 class NeuralDX7PatchGeneratorProcessor : public juce::AudioProcessor
 {
@@ -44,7 +45,7 @@ public:
     void setLatentValues(const std::vector<float>& values);
 
 private:
-    NeuralModelWrapper neuralModel;
+    std::unique_ptr<ThreadedInferenceEngine> inferenceEngine;
     std::vector<float> latentVector;
     juce::Random random;
     juce::MidiBuffer pendingMidiMessages;
