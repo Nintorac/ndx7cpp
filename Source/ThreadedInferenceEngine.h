@@ -24,7 +24,7 @@ public:
         Type type;
         std::vector<float> latentVector;
         std::function<void(std::vector<DX7Voice>)> callback;
-        std::function<void(DX7Voice)> singleCallback;
+        std::function<void(std::optional<DX7Voice>)> singleCallback;
         
         InferenceRequest(Type t, std::function<void(std::vector<DX7Voice>)> cb)
             : type(t), callback(cb) {}
@@ -32,7 +32,7 @@ public:
         InferenceRequest(Type t, const std::vector<float>& latent, std::function<void(std::vector<DX7Voice>)> cb)
             : type(t), latentVector(latent), callback(cb) {}
             
-        InferenceRequest(Type t, const std::vector<float>& latent, std::function<void(DX7Voice)> cb)
+        InferenceRequest(Type t, const std::vector<float>& latent, std::function<void(std::optional<DX7Voice>)> cb)
             : type(t), latentVector(latent), singleCallback(cb) {}
     };
     
@@ -46,7 +46,7 @@ public:
     // Request inference
     void requestRandomVoices(std::function<void(std::vector<DX7Voice>)> callback);
     void requestCustomVoices(const std::vector<float>& latentVector, std::function<void(std::vector<DX7Voice>)> callback);
-    void requestSingleCustomVoice(const std::vector<float>& latentVector, std::function<void(DX7Voice)> callback);
+    void requestSingleCustomVoice(const std::vector<float>& latentVector, std::function<void(std::optional<DX7Voice>)> callback);
     
     // Double buffer management
     bool hasBufferedRandomVoices() const;
@@ -55,8 +55,8 @@ public:
     
     // Custom voice caching
     bool hasCachedVoice(const std::vector<float>& latentVector) const;
-    DX7Voice getCachedVoice(const std::vector<float>& latentVector) const;
-    void requestCachedCustomVoice(const std::vector<float>& latentVector, std::function<void(DX7Voice)> callback);
+    std::optional<DX7Voice> getCachedVoice(const std::vector<float>& latentVector) const;
+    void requestCachedCustomVoice(const std::vector<float>& latentVector, std::function<void(std::optional<DX7Voice>)> callback);
     void preGenerateCustomVoice(const std::vector<float>& latentVector); // For debounced pre-generation
     
     // Thread safety
