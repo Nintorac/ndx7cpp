@@ -196,11 +196,16 @@ void NeuralDX7PatchGeneratorProcessor::generateAndSendMidi()
     std::cout << "]" << std::endl;
     
     // Use cached request for instant response if available
-    inferenceEngine->requestCachedCustomVoice(latentVector, [this](DX7Voice voice) {
+    inferenceEngine->requestCachedCustomVoice(latentVector, [this](std::optional<DX7Voice> voiceOpt) {
+        if (!voiceOpt.has_value()) {
+            std::cout << "Warning: Attempted to send null voice - ignoring request" << std::endl;
+            return;
+        }
+        
         std::cout << "Got custom voice, sending as single voice SysEx" << std::endl;
         
         // For customise functionality, send as single voice SysEx
-        auto sysexData = DX7VoicePacker::packSingleVoice(voice);
+        auto sysexData = DX7VoicePacker::packSingleVoice(voiceOpt.value());
         if (!sysexData.empty()) {
             std::cout << "Packed single voice SysEx data: " << sysexData.size() << " bytes" << std::endl;
             addMidiSysEx(sysexData);
