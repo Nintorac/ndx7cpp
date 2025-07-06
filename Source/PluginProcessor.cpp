@@ -263,12 +263,39 @@ void NeuralDX7PatchGeneratorProcessor::addMidiSysEx(const std::vector<uint8_t>& 
 {
     std::cout << "addMidiSysEx() called with " << sysexData.size() << " bytes" << std::endl;
     
+#if JucePlugin_Build_LV2 || JucePlugin_Build_VST3
+    // For LV2 and VST3, strip SysEx start (0xF0) and end (0xF7) bytes
+    if (sysexData.size() >= 2 && sysexData[0] == 0xF0 && sysexData[sysexData.size() - 1] == 0xF7)
+    {
+        std::cout << "LV2/VST3 plugin detected - stripping SysEx start/end bytes" << std::endl;
+        std::vector<uint8_t> strippedData(sysexData.begin() + 1, sysexData.end() - 1);
+        
+        juce::MidiMessage sysexMessage = juce::MidiMessage::createSysExMessage(
+            strippedData.data(), static_cast<int>(strippedData.size())
+        );
+        
+        pendingMidiMessages.addEvent(sysexMessage, 0);
+        std::cout << "Added stripped SysEx message to pending MIDI buffer" << std::endl;
+    }
+    else
+    {
+        std::cout << "SysEx data doesn't have expected start/end bytes, sending as-is" << std::endl;
+        juce::MidiMessage sysexMessage = juce::MidiMessage::createSysExMessage(
+            sysexData.data(), static_cast<int>(sysexData.size())
+        );
+        
+        pendingMidiMessages.addEvent(sysexMessage, 0);
+        std::cout << "Added SysEx message to pending MIDI buffer" << std::endl;
+    }
+#else
+    // For other plugin formats, send SysEx data as-is
     juce::MidiMessage sysexMessage = juce::MidiMessage::createSysExMessage(
         sysexData.data(), static_cast<int>(sysexData.size())
     );
     
     pendingMidiMessages.addEvent(sysexMessage, 0);
     std::cout << "Added SysEx message to pending MIDI buffer" << std::endl;
+#endif
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
