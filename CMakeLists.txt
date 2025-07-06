@@ -66,8 +66,10 @@ juce_add_plugin(NeuralDX7PatchGenerator
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE NinA
     PLUGIN_CODE NeuD
-    FORMATS Standalone VST3 AU
+    FORMATS Standalone VST3 LV2 AU
     VST3_CATEGORIES "Generator Tools"
+    LV2_CATEGORIES "GeneratorPlugin"
+    LV2URI "urn:nintoracaudio:neuraldx7patchgenerator"
     PRODUCT_NAME "NeuralDX7PatchGenerator")
 
 # Override standalone binary location to be in ${CMAKE_BUILD_TYPE}/ instead of ${CMAKE_BUILD_TYPE}/Standalone/
