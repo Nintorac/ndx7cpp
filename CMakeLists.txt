@@ -177,13 +177,12 @@ elseif(APPLE)
         COMMENT "Copying libtorch libraries to .app and .component bundle Frameworks directories")
 elseif(WIN32)
     # Windows: Automatically copy all required DLLs (CMake 3.21+)
-    add_custom_command(TARGET NeuralDX7PatchGenerator POST_BUILD
+    add_custom_command(TARGET NeuralDX7PatchGenerator_Standalone POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_FILE:NeuralDX7PatchGenerator>
-            $<TARGET_RUNTIME_DLLS:NeuralDX7PatchGenerator>
+            $<TARGET_RUNTIME_DLLS:NeuralDX7PatchGenerator_Standalone>
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/$<CONFIG>/"
         COMMAND_EXPAND_LISTS
-        COMMENT "Automatically copying required DLLs to $<CONFIG> directory")
+        COMMENT "Automatically copying required DLLs to standalone executable directory")
 endif()
 
 # Disable JUCE networking features to avoid curl dependency
