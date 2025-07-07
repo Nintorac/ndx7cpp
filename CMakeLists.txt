@@ -68,6 +68,7 @@ juce_add_plugin(NeuralDX7PatchGenerator
     PLUGIN_CODE NeuD
     FORMATS Standalone VST3 LV2 AU
     VST3_CATEGORIES "Generator Tools"
+    VST3_AUTO_MANIFEST FALSE
     LV2_CATEGORIES "GeneratorPlugin"
     LV2URI "urn:nintoracaudio:neuraldx7patchgenerator"
     PRODUCT_NAME "NeuralDX7PatchGenerator")
