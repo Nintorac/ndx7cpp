@@ -66,7 +66,7 @@ juce_add_plugin(NeuralDX7PatchGenerator
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE NinA
     PLUGIN_CODE NeuD
-    FORMATS Standalone VST3 LV2 AU
+    FORMATS Standalone VST3 AU
     VST3_CATEGORIES "Generator Tools"
     VST3_AUTO_MANIFEST FALSE
     LV2_CATEGORIES "GeneratorPlugin"
