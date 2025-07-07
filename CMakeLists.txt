@@ -176,13 +176,21 @@ elseif(APPLE)
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.component/Contents/Frameworks/libc10.dylib"
         COMMENT "Copying libtorch libraries to .app and .component bundle Frameworks directories")
 elseif(WIN32)
-    # Windows: Automatically copy all required DLLs (CMake 3.21+)
+    # Windows: Copy both user DLLs and system runtime DLLs
+    include(InstallRequiredSystemLibraries)
+    
     add_custom_command(TARGET NeuralDX7PatchGenerator_Standalone POST_BUILD
+        # Copy user/library DLLs
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_RUNTIME_DLLS:NeuralDX7PatchGenerator_Standalone>
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/$<CONFIG>/"
         COMMAND_EXPAND_LISTS
-        COMMENT "Automatically copying required DLLs to standalone executable directory")
+        # Copy MSVC runtime DLLs
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/$<CONFIG>/"
+        COMMAND_EXPAND_LISTS
+        COMMENT "Copying required DLLs (user libraries + MSVC runtime)")
 endif()
 
 # Disable JUCE networking features to avoid curl dependency
