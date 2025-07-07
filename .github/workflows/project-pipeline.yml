@@ -47,7 +47,7 @@ jobs:
       run: make build
 
     - name: Show Build Output
-      run: ls -lR ${{github.workspace}}/build
+      run: ls -lR ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
@@ -96,7 +96,7 @@ jobs:
       run: make build
 
     - name: Show Build Output
-      run: ls -lR ${{github.workspace}}/build
+      run: ls -lR ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
@@ -149,7 +149,7 @@ jobs:
 
     - name: Show
       shell: cmd
-      run: dir /s ${{github.workspace}}\build
+      run: dir /s ${{github.workspace}}\build\NeuralDX7PatchGenerator_artefacts
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
