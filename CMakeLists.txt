@@ -66,7 +66,11 @@ juce_add_plugin(NeuralDX7PatchGenerator
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE NinA
     PLUGIN_CODE NeuD
-    FORMATS Standalone AU
+    FORMATS Standalone VST3 AU
+    VST3_CATEGORIES "Generator Tools"
+    VST3_AUTO_MANIFEST FALSE
+    LV2_CATEGORIES "GeneratorPlugin"
+    LV2URI "urn:nintoracaudio:neuraldx7patchgenerator"
     PRODUCT_NAME "NeuralDX7PatchGenerator")
 
 # Override standalone binary location to be in ${CMAKE_BUILD_TYPE}/ instead of ${CMAKE_BUILD_TYPE}/Standalone/
@@ -95,6 +99,7 @@ target_sources(NeuralDX7PatchGenerator
         Source/DX7BulkPacker.cpp
         Source/NeuralModelWrapper.cpp
         Source/EmbeddedModelLoader.cpp
+        Source/ThreadedInferenceEngine.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/model_data.h)
 
 # Link libraries
@@ -171,33 +176,31 @@ elseif(APPLE)
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.component/Contents/Frameworks/libc10.dylib"
         COMMENT "Copying libtorch libraries to .app and .component bundle Frameworks directories")
 elseif(WIN32)
-    # Windows: Copy essential .dll files to exe directory
-    add_custom_command(TARGET NeuralDX7PatchGenerator POST_BUILD
+    # Windows: Configure system runtime libraries detection
+    set(CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
+    set(CMAKE_INSTALL_DEBUG_LIBRARIES TRUE)
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+    include(InstallRequiredSystemLibraries)
+    
+    add_custom_command(TARGET NeuralDX7PatchGenerator_Standalone POST_BUILD
+        # Copy user/library DLLs
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/libtorch/lib/torch.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/torch.dll"
+            $<TARGET_RUNTIME_DLLS:NeuralDX7PatchGenerator_Standalone>
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/$<CONFIG>/"
+        COMMAND_EXPAND_LISTS
+        # Copy MSVC runtime DLLs (configuration-aware)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/libtorch/lib/c10.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/c10.dll"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/libtorch/lib/libiomp5md.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/libiomp5md.dll"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/Windows/System32/msvcp140.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/msvcp140.dll"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/Windows/System32/vcruntime140.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/vcruntime140.dll"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/Windows/System32/vcruntime140_1.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/vcruntime140_1.dll"
-        COMMENT "Copying libtorch DLLs and runtime libraries to ${CMAKE_BUILD_TYPE} directory")
+            ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/$<CONFIG>/"
+        COMMAND_EXPAND_LISTS
+        COMMENT "Copying required DLLs (user libraries + MSVC runtime)")
 endif()
 
 # Disable JUCE networking features to avoid curl dependency
 target_compile_definitions(NeuralDX7PatchGenerator PRIVATE 
     JUCE_WEB_BROWSER=0
-    JUCE_USE_CURL=0)
+    JUCE_USE_CURL=0
+    JUCE_VST3_CAN_REPLACE_VST2=0)
 
 # Include directories
 target_include_directories(NeuralDX7PatchGenerator PRIVATE Source ${CMAKE_CURRENT_BINARY_DIR} ${GTK3_INCLUDE_DIRS} ${WEBKIT2GTK_INCLUDE_DIRS})

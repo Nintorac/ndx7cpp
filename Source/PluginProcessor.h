@@ -4,6 +4,7 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include "NeuralModelWrapper.h"
 #include "DX7VoicePacker.h"
+#include "ThreadedInferenceEngine.h"
 
 class NeuralDX7PatchGeneratorProcessor : public juce::AudioProcessor
 {
@@ -42,12 +43,16 @@ public:
     void generateAndSendMidi();
     void generateRandomVoicesAndSend();
     void setLatentValues(const std::vector<float>& values);
+    void debouncedPreGeneration(); // For slider changes
 
 private:
-    NeuralModelWrapper neuralModel;
+    std::unique_ptr<ThreadedInferenceEngine> inferenceEngine;
     std::vector<float> latentVector;
     juce::Random random;
     juce::MidiBuffer pendingMidiMessages;
+    
+    // Debouncing for slider changes
+    std::unique_ptr<juce::Timer> debounceTimer;
     
     void addMidiSysEx(const std::vector<uint8_t>& sysexData);
 

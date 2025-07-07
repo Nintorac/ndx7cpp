@@ -3,16 +3,49 @@
 #include "DX7BulkPacker.h"
 #include "DX7VoicePacker.h"
 
+// Simple debounce timer class
+class DebounceTimer : public juce::Timer
+{
+public:
+    DebounceTimer(std::function<void()> callback) : callback_(callback) {}
+    
+    void timerCallback() override
+    {
+        stopTimer();
+        if (callback_)
+            callback_();
+    }
+    
+    void debounce(int milliseconds)
+    {
+        startTimer(milliseconds);
+    }
+    
+private:
+    std::function<void()> callback_;
+};
+
 
 NeuralDX7PatchGeneratorProcessor::NeuralDX7PatchGeneratorProcessor()
      : AudioProcessor (BusesProperties())
 {
-
     latentVector.resize(NeuralModelWrapper::LATENT_DIM, 0.0f);
+    inferenceEngine = std::make_unique<ThreadedInferenceEngine>();
+    inferenceEngine->startInferenceThread();
+    
+    // Create debounce timer for slider changes
+    debounceTimer = std::make_unique<DebounceTimer>([this]() {
+        // Pre-generate voice for current latent vector
+        inferenceEngine->preGenerateCustomVoice(latentVector);
+    });
 }
 
 NeuralDX7PatchGeneratorProcessor::~NeuralDX7PatchGeneratorProcessor()
 {
+    if (inferenceEngine)
+    {
+        inferenceEngine->stopInferenceThread();
+    }
 }
 
 const juce::String NeuralDX7PatchGeneratorProcessor::getName() const
@@ -150,75 +183,79 @@ void NeuralDX7PatchGeneratorProcessor::generateAndSendMidi()
 {
     std::cout << "generateAndSendMidi() called" << std::endl;
     
-    if (!neuralModel.isModelLoaded()) {
-        std::cout << "Neural model not loaded, attempting to load..." << std::endl;
-        if (!neuralModel.loadModelFromFile()) {
-            std::cout << "Failed to load neural model!" << std::endl;
-            return;
-        }
-        std::cout << "Neural model loaded successfully!" << std::endl;
+    if (!inferenceEngine->isModelLoaded()) {
+        std::cout << "Neural model not loaded yet, request ignored" << std::endl;
+        return;
     }
     
-    std::cout << "Generating voices with latent vector: [";
+    std::cout << "Generating voice with latent vector: [";
     for (size_t i = 0; i < latentVector.size(); ++i) {
         std::cout << latentVector[i];
         if (i < latentVector.size() - 1) std::cout << ", ";
     }
     std::cout << "]" << std::endl;
     
-    auto voices = neuralModel.generateVoices(latentVector);
-    if (voices.empty()) {
-        std::cout << "No voices generated!" << std::endl;
-        return;
-    }
-    
-    std::cout << "Generated " << voices.size() << " voices, sending first voice as single voice SysEx" << std::endl;
-    
-    // For customise functionality, send just the first voice as a single voice SysEx
-    auto sysexData = DX7VoicePacker::packSingleVoice(voices[0]);
-    if (!sysexData.empty()) {
-        std::cout << "Packed single voice SysEx data: " << sysexData.size() << " bytes" << std::endl;
-        addMidiSysEx(sysexData);
-    } else {
-        std::cout << "Failed to pack single voice SysEx data!" << std::endl;
-    }
+    // Use cached request for instant response if available
+    inferenceEngine->requestCachedCustomVoice(latentVector, [this](std::optional<DX7Voice> voiceOpt) {
+        if (!voiceOpt.has_value()) {
+            std::cout << "Warning: Attempted to send null voice - ignoring request" << std::endl;
+            return;
+        }
+        
+        std::cout << "Got custom voice, sending as single voice SysEx" << std::endl;
+        
+        // For customise functionality, send as single voice SysEx
+        auto sysexData = DX7VoicePacker::packSingleVoice(voiceOpt.value());
+        if (!sysexData.empty()) {
+            std::cout << "Packed single voice SysEx data: " << sysexData.size() << " bytes" << std::endl;
+            addMidiSysEx(sysexData);
+        } else {
+            std::cout << "Failed to pack single voice SysEx data!" << std::endl;
+        }
+    });
 }
 
 void NeuralDX7PatchGeneratorProcessor::generateRandomVoicesAndSend()
 {
     std::cout << "generateRandomVoicesAndSend() called" << std::endl;
     
-    if (!neuralModel.isModelLoaded()) {
-        std::cout << "Neural model not loaded, attempting to load..." << std::endl;
-        if (!neuralModel.loadModelFromFile()) {
-            std::cout << "Failed to load neural model!" << std::endl;
+    // Try to use buffered voices first for instant response
+    if (inferenceEngine->hasBufferedRandomVoices()) {
+        std::cout << "Using buffered random voices for instant response" << std::endl;
+        auto voices = inferenceEngine->getBufferedRandomVoices();
+        
+        if (!voices.empty()) {
+            std::cout << "Got " << voices.size() << " buffered voices, packing into SysEx..." << std::endl;
+            auto sysexData = DX7BulkPacker::packBulkDump(voices);
+            
+            if (!sysexData.empty()) {
+                std::cout << "SysEx data packed successfully, sending..." << std::endl;
+                addMidiSysEx(sysexData);
+            } else {
+                std::cout << "Failed to pack SysEx data!" << std::endl;
+            }
             return;
         }
     }
     
-    std::cout << "Generating 32 random voices..." << std::endl;
-    auto voices = neuralModel.generateMultipleRandomVoices();
-    
-    if (voices.empty()) {
-        std::cout << "Failed to generate voices!" << std::endl;
-        return;
-    }
-    
-    std::cout << "Generated " << voices.size() << " voices, packing into SysEx..." << std::endl;
-    auto sysexData = DX7BulkPacker::packBulkDump(voices);
-    
-    if (!sysexData.empty()) {
-        std::cout << "SysEx data packed successfully, sending..." << std::endl;
-        addMidiSysEx(sysexData);
-    } else {
-        std::cout << "Failed to pack SysEx data!" << std::endl;
-    }
+    // If no buffer available, do nothing to prevent weird behavior on rapid clicks
+    std::cout << "No buffered voices available, ignoring request" << std::endl;
 }
 
 void NeuralDX7PatchGeneratorProcessor::setLatentValues(const std::vector<float>& values)
 {
     if (values.size() == NeuralModelWrapper::LATENT_DIM) {
         latentVector = values;
+        // Trigger debounced pre-generation
+        debouncedPreGeneration();
+    }
+}
+
+void NeuralDX7PatchGeneratorProcessor::debouncedPreGeneration()
+{
+    // Debounce slider changes with 150ms delay
+    if (debounceTimer) {
+        static_cast<DebounceTimer*>(debounceTimer.get())->debounce(150);
     }
 }
 
@@ -226,12 +263,39 @@ void NeuralDX7PatchGeneratorProcessor::addMidiSysEx(const std::vector<uint8_t>& 
 {
     std::cout << "addMidiSysEx() called with " << sysexData.size() << " bytes" << std::endl;
     
+#if JucePlugin_Build_LV2 || JucePlugin_Build_VST3
+    // For LV2 and VST3, strip SysEx start (0xF0) and end (0xF7) bytes
+    if (sysexData.size() >= 2 && sysexData[0] == 0xF0 && sysexData[sysexData.size() - 1] == 0xF7)
+    {
+        std::cout << "LV2/VST3 plugin detected - stripping SysEx start/end bytes" << std::endl;
+        std::vector<uint8_t> strippedData(sysexData.begin() + 1, sysexData.end() - 1);
+        
+        juce::MidiMessage sysexMessage = juce::MidiMessage::createSysExMessage(
+            strippedData.data(), static_cast<int>(strippedData.size())
+        );
+        
+        pendingMidiMessages.addEvent(sysexMessage, 0);
+        std::cout << "Added stripped SysEx message to pending MIDI buffer" << std::endl;
+    }
+    else
+    {
+        std::cout << "SysEx data doesn't have expected start/end bytes, sending as-is" << std::endl;
+        juce::MidiMessage sysexMessage = juce::MidiMessage::createSysExMessage(
+            sysexData.data(), static_cast<int>(sysexData.size())
+        );
+        
+        pendingMidiMessages.addEvent(sysexMessage, 0);
+        std::cout << "Added SysEx message to pending MIDI buffer" << std::endl;
+    }
+#else
+    // For other plugin formats, send SysEx data as-is
     juce::MidiMessage sysexMessage = juce::MidiMessage::createSysExMessage(
         sysexData.data(), static_cast<int>(sysexData.size())
     );
     
     pendingMidiMessages.addEvent(sysexMessage, 0);
     std::cout << "Added SysEx message to pending MIDI buffer" << std::endl;
+#endif
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
