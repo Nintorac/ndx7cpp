@@ -175,7 +175,10 @@ elseif(APPLE)
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.component/Contents/Frameworks/libc10.dylib"
         COMMENT "Copying libtorch libraries to .app and .component bundle Frameworks directories")
 elseif(WIN32)
-    # Windows: Copy both user DLLs and system runtime DLLs
+    # Windows: Configure system runtime libraries detection
+    set(CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
+    set(CMAKE_INSTALL_DEBUG_LIBRARIES TRUE)
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
     include(InstallRequiredSystemLibraries)
     
     add_custom_command(TARGET NeuralDX7PatchGenerator_Standalone POST_BUILD
@@ -184,7 +187,7 @@ elseif(WIN32)
             $<TARGET_RUNTIME_DLLS:NeuralDX7PatchGenerator_Standalone>
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/$<CONFIG>/"
         COMMAND_EXPAND_LISTS
-        # Copy MSVC runtime DLLs
+        # Copy MSVC runtime DLLs (configuration-aware)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/$<CONFIG>/"
