@@ -176,27 +176,14 @@ elseif(APPLE)
             "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/NeuralDX7PatchGenerator.component/Contents/Frameworks/libc10.dylib"
         COMMENT "Copying libtorch libraries to .app and .component bundle Frameworks directories")
 elseif(WIN32)
-    # Windows: Copy essential .dll files to exe directory
+    # Windows: Automatically copy all required DLLs (CMake 3.21+)
     add_custom_command(TARGET NeuralDX7PatchGenerator POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/libtorch/lib/torch.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/torch.dll"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/libtorch/lib/c10.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/c10.dll"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/libtorch/lib/libiomp5md.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/libiomp5md.dll"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/Windows/System32/msvcp140.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/msvcp140.dll"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/Windows/System32/vcruntime140.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/vcruntime140.dll"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "C:/Windows/System32/vcruntime140_1.dll"
-            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/${CMAKE_BUILD_TYPE}/vcruntime140_1.dll"
-        COMMENT "Copying libtorch DLLs and runtime libraries to ${CMAKE_BUILD_TYPE} directory")
+            $<TARGET_FILE:NeuralDX7PatchGenerator>
+            $<TARGET_RUNTIME_DLLS:NeuralDX7PatchGenerator>
+            "${CMAKE_CURRENT_BINARY_DIR}/NeuralDX7PatchGenerator_artefacts/$<CONFIG>/"
+        COMMAND_EXPAND_LISTS
+        COMMENT "Automatically copying required DLLs to $<CONFIG> directory")
 endif()
 
 # Disable JUCE networking features to avoid curl dependency
