@@ -189,24 +189,52 @@ jobs:
 
       - name: Create release packages
         run: |
-          # Create Windows ZIP
+          # Create Windows Standalone ZIP
           if [ -d "./artifacts/windows-bin" ]; then
             cd artifacts/windows-bin
-            zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-windows.zip .
+            zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-windows-standalone.zip NeuralDX7PatchGenerator.exe *.dll
             cd ../..
           fi
           
-          # Create Linux ZIP  
+          # Create Windows VST ZIP
+          if [ -d "./artifacts/windows-bin" ]; then
+            cd artifacts/windows-bin
+            zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-windows-vst.zip VST3/
+            cd ../..
+          fi
+          
+          # Create Linux Standalone ZIP  
           if [ -d "./artifacts/linux-bin" ]; then
             cd artifacts/linux-bin
-            zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-linux.zip .
+            zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-linux-standalone.zip NeuralDX7PatchGenerator lib/
             cd ../..
           fi
           
-          # Create macOS ZIP
+          # Create Linux VST ZIP
+          if [ -d "./artifacts/linux-bin" ]; then
+            cd artifacts/linux-bin
+            zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-linux-vst.zip VST3/
+            cd ../..
+          fi
+          
+          # Create macOS Standalone ZIP
           if [ -d "./artifacts/macos-bin" ]; then
             cd artifacts/macos-bin
-            zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-macos.zip .
+            zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-macos-standalone.zip NeuralDX7PatchGenerator.app
+            cd ../..
+          fi
+          
+          # Create macOS VST ZIP
+          if [ -d "./artifacts/macos-bin" ]; then
+            cd artifacts/macos-bin
+            zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-macos-vst.zip VST3/
+            cd ../..
+          fi
+          
+          # Create macOS AU ZIP
+          if [ -d "./artifacts/macos-bin" ]; then
+            cd artifacts/macos-bin
+            zip -r ../../NeuralDX7PatchGenerator-${{ steps.extract_tag.outputs.tag }}-macos-au.zip AU/
             cd ../..
           fi
 
