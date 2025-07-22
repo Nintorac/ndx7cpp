@@ -55,6 +55,7 @@ jobs:
         name: linux-bin
         path: |
           ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/NeuralDX7PatchGenerator
+          ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/VST3/
           ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/lib/
           !**/*.a
 
@@ -105,6 +106,8 @@ jobs:
         path: |
           ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/NeuralDX7PatchGenerator.app
           ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/NeuralDX7PatchGenerator.component
+          ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/AU/
+          ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/VST3/
 
   build-windows:
     runs-on: windows-latest
@@ -157,6 +160,7 @@ jobs:
         name: windows-bin
         path: |
           ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/NeuralDX7PatchGenerator.exe
+          ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/VST3/
           ${{github.workspace}}/build/NeuralDX7PatchGenerator_artefacts/${{env.BUILD_TYPE}}/*.dll
 
   release:
