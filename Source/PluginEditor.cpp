@@ -29,12 +29,37 @@ CustomiseTab::CustomiseTab(NeuralDX7PatchGeneratorProcessor& processor)
         addAndMakeVisible(*latentLabels[i]);
     }
     
-    // Create buttons
-    generateButton = std::make_unique<juce::TextButton>("Generate & Send");
+    // Create Generate button
+    generateButton = std::make_unique<juce::ImageButton>("Generate");
+    auto generateNormal = juce::ImageCache::getFromMemory(
+        AssetsData::customise_generate_unpressed_png,
+        AssetsData::customise_generate_unpressed_pngSize
+    );
+    auto generatePressed = juce::ImageCache::getFromMemory(
+        AssetsData::customise_generate_pressed_png,
+        AssetsData::customise_generate_pressed_pngSize
+    );
+    generateButton->setImages(true, true, true,
+                             generateNormal, 1.0f, juce::Colours::transparentBlack,
+                             generateNormal, 1.0f, juce::Colours::transparentBlack,
+                             generatePressed, 1.0f, juce::Colours::transparentBlack);
     generateButton->addListener(this);
     addAndMakeVisible(*generateButton);
-    
-    randomizeButton = std::make_unique<juce::TextButton>("Randomize");
+
+    // Create Randomize button
+    randomizeButton = std::make_unique<juce::ImageButton>("Randomize");
+    auto randomizeNormal = juce::ImageCache::getFromMemory(
+        AssetsData::customise_randomise_unpressed_png,
+        AssetsData::customise_randomise_unpressed_pngSize
+    );
+    auto randomizePressed = juce::ImageCache::getFromMemory(
+        AssetsData::customise_randomise_pressed_png,
+        AssetsData::customise_randomise_pressed_pngSize
+    );
+    randomizeButton->setImages(true, true, true,
+                              randomizeNormal, 1.0f, juce::Colours::transparentBlack,
+                              randomizeNormal, 1.0f, juce::Colours::transparentBlack,
+                              randomizePressed, 1.0f, juce::Colours::transparentBlack);
     randomizeButton->addListener(this);
     addAndMakeVisible(*randomizeButton);
 }
@@ -57,27 +82,30 @@ void CustomiseTab::paint(juce::Graphics& g)
 void CustomiseTab::resized()
 {
     auto bounds = getLocalBounds();
-    
+
     bounds.removeFromTop(10); // spacing
-    
-    // Sliders
-    auto sliderArea = bounds.removeFromTop(250);
+
+    // Sliders area - use most of the vertical space
+    auto sliderArea = bounds.removeFromTop(bounds.getHeight() - 80); // Reserve 80px for buttons
     int sliderWidth = sliderArea.getWidth() / NeuralModelWrapper::LATENT_DIM;
-    
+
     for (int i = 0; i < NeuralModelWrapper::LATENT_DIM; ++i) {
         auto sliderBounds = sliderArea.removeFromLeft(sliderWidth).reduced(5);
         latentLabels[i]->setBounds(sliderBounds.removeFromTop(20));
         latentSliders[i]->setBounds(sliderBounds);
     }
-    
-    bounds.removeFromTop(20); // spacing
-    
-    // Buttons
-    auto buttonArea = bounds.removeFromTop(40);
-    int buttonWidth = buttonArea.getWidth() / 2;
-    
-    generateButton->setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(10));
-    randomizeButton->setBounds(buttonArea.reduced(10));
+
+    bounds.removeFromTop(10); // spacing between sliders and buttons
+
+    // Buttons below the sliders - maintain aspect ratio (684:53 ≈ 12.9:1)
+    int buttonWidth = bounds.getWidth() / 2;
+    auto buttonHeight = static_cast<int>(buttonWidth / 12.9f);
+
+    auto generateBounds = bounds.removeFromLeft(buttonWidth).reduced(10);
+    generateButton->setBounds(generateBounds.withHeight(buttonHeight));
+
+    auto randomizeBounds = bounds.reduced(10);
+    randomizeButton->setBounds(randomizeBounds.withHeight(buttonHeight));
 }
 
 void CustomiseTab::sliderValueChanged(juce::Slider* slider)
