@@ -54,6 +54,30 @@ if(UNIX AND NOT APPLE)
     pkg_check_modules(HARFBUZZ REQUIRED harfbuzz)
 endif()
 
+# Add binary data for UI assets
+juce_add_binary_data(AssetsData
+    HEADER_NAME "AssetsData.h"
+    NAMESPACE AssetsData
+    SOURCES
+        asssets/background.jpg
+        asssets/customise_generate_pressed.png
+        asssets/customise_generate_unpressed.png
+        asssets/customise_randomise_pressed.png
+        asssets/customise_randomise_unpressed.png
+        asssets/customise_slider_knob.png
+        asssets/customise_slider_track.png
+        asssets/global_options.png
+        asssets/randomise_cart.png
+        asssets/tab_customise_selected_pressed.png
+        asssets/tab_customise_selected_unpressed.png
+        asssets/tab_customise_unselected_pressed.png
+        asssets/tab_customise_unselected_unpressed.png
+        asssets/tab_randomise_selected_pressed.png
+        asssets/tab_randomise_selected_unpressed.png
+        asssets/tab_randomise_unselected_pressed.png
+        asssets/tab_randomise_unselected_unpressed.png
+)
+
 # Create the plugin target
 juce_add_plugin(NeuralDX7PatchGenerator
     COMPANY_NAME "NintoracAudio"
@@ -105,6 +129,7 @@ target_sources(NeuralDX7PatchGenerator
 # Link libraries
 target_link_libraries(NeuralDX7PatchGenerator
     PRIVATE
+        AssetsData
         juce::juce_audio_utils
         juce::juce_audio_processors
         juce::juce_audio_devices
