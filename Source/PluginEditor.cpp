@@ -144,7 +144,16 @@ void CustomiseTab::updateLatentValues()
 RandomiseTab::RandomiseTab(NeuralDX7PatchGeneratorProcessor& processor)
     : audioProcessor(processor)
 {
-    randomiseButton = std::make_unique<juce::TextButton>("Randomise");
+    // Create cart image button
+    randomiseButton = std::make_unique<juce::ImageButton>("Randomise");
+    auto cartImage = juce::ImageCache::getFromMemory(
+        AssetsData::randomise_cart_png,
+        AssetsData::randomise_cart_pngSize
+    );
+    randomiseButton->setImages(true, true, true,
+                              cartImage, 1.0f, juce::Colours::transparentBlack,
+                              cartImage, 1.0f, juce::Colours::transparentBlack,
+                              cartImage, 0.8f, juce::Colours::transparentBlack);
     randomiseButton->addListener(this);
     addAndMakeVisible(*randomiseButton);
 }
@@ -161,7 +170,14 @@ void RandomiseTab::paint(juce::Graphics& g)
 void RandomiseTab::resized()
 {
     auto bounds = getLocalBounds();
-    auto buttonBounds = bounds.withSizeKeepingCentre(200, 50);
+
+    // Cart image aspect ratio is 369:386 (roughly square, slightly taller)
+    // Size it to fit nicely in the tab, centered
+    auto maxSize = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.6f; // 60% of available space
+    auto cartWidth = static_cast<int>(maxSize);
+    auto cartHeight = static_cast<int>(maxSize * (386.0f / 369.0f)); // Maintain aspect ratio
+
+    auto buttonBounds = bounds.withSizeKeepingCentre(cartWidth, cartHeight);
     randomiseButton->setBounds(buttonBounds);
 }
 
@@ -181,13 +197,6 @@ NeuralDX7PatchGeneratorEditor::NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGene
         AssetsData::background_jpg,
         AssetsData::background_jpgSize
     );
-
-    // Create title label
-    titleLabel = std::make_unique<juce::Label>("title", "Neural DX7 Patch Generator");
-    titleLabel->setFont(juce::Font(24.0f, juce::Font::bold));
-    titleLabel->setJustificationType(juce::Justification::centred);
-    titleLabel->setColour(juce::Label::textColourId, juce::Colours::white);
-    addAndMakeVisible(*titleLabel);
 
     // Create OPTIONS button
     optionsButton = std::make_unique<juce::ImageButton>("Options");
@@ -242,15 +251,12 @@ void NeuralDX7PatchGeneratorEditor::resized()
 
     // Reserve top 18% for header area
     auto headerHeight = static_cast<int>(bounds.getHeight() * 0.18f);
-    auto headerArea = bounds.removeFromTop(headerHeight);
+    bounds.removeFromTop(headerHeight);
 
-    // OPTIONS button - 5% of total height, in top-left corner
-    auto optionsHeight = static_cast<int>(bounds.getHeight() * 0.035f);
+    // OPTIONS button - 3.5% of total height, in top-left corner
+    auto optionsHeight = static_cast<int>(getHeight() * 0.035f);
     auto optionsWidth = optionsHeight * 6; // Maintain aspect ratio (202:35 ≈ 5.77:1)
     optionsButton->setBounds(10, 10, optionsWidth, optionsHeight);
-
-    // Title centered in remaining header area
-    titleLabel->setBounds(headerArea.withTrimmedLeft(20).withTrimmedTop(10));
 
     // Tabbed component takes the rest of the space
     tabbedComponent->setBounds(bounds);
