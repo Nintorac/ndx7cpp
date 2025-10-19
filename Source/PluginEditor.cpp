@@ -1,6 +1,10 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+//==============================================================================
+// CustomiseTab Implementation
+//==============================================================================
+
 CustomiseTab::CustomiseTab(NeuralDX7PatchGeneratorProcessor& processor)
     : audioProcessor(processor)
 {
@@ -14,11 +18,13 @@ CustomiseTab::CustomiseTab(NeuralDX7PatchGeneratorProcessor& processor)
         latentSliders[i]->setValue(0.0);
         latentSliders[i]->setSliderStyle(juce::Slider::LinearVertical);
         latentSliders[i]->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+        latentSliders[i]->setLookAndFeel(&customLookAndFeel);
         latentSliders[i]->addListener(this);
         addAndMakeVisible(*latentSliders[i]);
-        
+
         latentLabels[i] = std::make_unique<juce::Label>("label" + juce::String(i), "Z" + juce::String(i + 1));
         latentLabels[i]->setJustificationType(juce::Justification::centred);
+        latentLabels[i]->setColour(juce::Label::textColourId, juce::Colours::white);
         addAndMakeVisible(*latentLabels[i]);
     }
     
@@ -34,6 +40,12 @@ CustomiseTab::CustomiseTab(NeuralDX7PatchGeneratorProcessor& processor)
 
 CustomiseTab::~CustomiseTab()
 {
+    // Reset LookAndFeel to avoid dangling pointers
+    for (auto& slider : latentSliders)
+    {
+        if (slider)
+            slider->setLookAndFeel(nullptr);
+    }
 }
 
 void CustomiseTab::paint(juce::Graphics& g)
