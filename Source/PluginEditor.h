@@ -3,15 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
 #include "DX7CustomLookAndFeel.h"
-
-class FullWidthLookAndFeel : public juce::LookAndFeel_V4
-{
-public:
-    int getTabButtonBestWidth(juce::TabBarButton& button, int tabDepth) override
-    {
-        return button.getTabbedButtonBar().getWidth() / button.getTabbedButtonBar().getNumTabs();
-    }
-};
+#include "DX7TabComponents.h"
 
 class CustomiseTab : public juce::Component,
                      public juce::Slider::Listener,
@@ -73,10 +65,9 @@ public:
 
 private:
     NeuralDX7PatchGeneratorProcessor& audioProcessor;
-    
-    FullWidthLookAndFeel customLookAndFeel;
+
     std::unique_ptr<juce::Label> titleLabel;
-    std::unique_ptr<juce::TabbedComponent> tabbedComponent;
+    std::unique_ptr<DX7TabbedComponent> tabbedComponent;
     std::unique_ptr<CustomiseTab> customiseTab;
     std::unique_ptr<RandomiseTab> randomiseTab;
 
