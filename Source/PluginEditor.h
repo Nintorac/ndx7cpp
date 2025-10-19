@@ -44,12 +44,12 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
-    
+
     void buttonClicked (juce::Button* button) override;
 
 private:
     NeuralDX7PatchGeneratorProcessor& audioProcessor;
-    std::unique_ptr<juce::TextButton> randomiseButton;
+    std::unique_ptr<juce::ImageButton> randomiseButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RandomiseTab)
 };
@@ -68,7 +68,6 @@ private:
 
     juce::Image backgroundImage;
 
-    std::unique_ptr<juce::Label> titleLabel;
     std::unique_ptr<juce::ImageButton> optionsButton;
     std::unique_ptr<DX7TabbedComponent> tabbedComponent;
     std::unique_ptr<CustomiseTab> customiseTab;
