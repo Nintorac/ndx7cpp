@@ -27,8 +27,8 @@ private:
     std::vector<std::unique_ptr<juce::Slider>> latentSliders;
     std::vector<std::unique_ptr<juce::Label>> latentLabels;
 
-    std::unique_ptr<juce::TextButton> generateButton;
-    std::unique_ptr<juce::TextButton> randomizeButton;
+    std::unique_ptr<juce::ImageButton> generateButton;
+    std::unique_ptr<juce::ImageButton> randomizeButton;
 
     void updateLatentValues();
 
