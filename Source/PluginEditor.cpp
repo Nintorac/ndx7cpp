@@ -158,27 +158,24 @@ NeuralDX7PatchGeneratorEditor::NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGene
     titleLabel->setFont(juce::Font(20.0f, juce::Font::bold));
     titleLabel->setJustificationType(juce::Justification::centred);
     addAndMakeVisible(*titleLabel);
-    
+
     // Create tabs
     customiseTab = std::make_unique<CustomiseTab>(audioProcessor);
     randomiseTab = std::make_unique<RandomiseTab>(audioProcessor);
-    
-    // Create tabbed component
-    tabbedComponent = std::make_unique<juce::TabbedComponent>(juce::TabbedButtonBar::TabsAtTop);
-    tabbedComponent->setLookAndFeel(&customLookAndFeel);
+
+    // Create custom tabbed component
+    tabbedComponent = std::make_unique<DX7TabbedComponent>();
     tabbedComponent->addTab("Randomise", juce::Colours::lightgrey, randomiseTab.get(), false);
     tabbedComponent->addTab("Customise", juce::Colours::lightgrey, customiseTab.get(), false);
-    tabbedComponent->setTabBarDepth(30);
-    
+
     addAndMakeVisible(*tabbedComponent);
-    
+
     // Call setSize() LAST after all components are initialized
     setSize (600, 400);
 }
 
 NeuralDX7PatchGeneratorEditor::~NeuralDX7PatchGeneratorEditor()
 {
-    tabbedComponent->setLookAndFeel(nullptr);
 }
 
 void NeuralDX7PatchGeneratorEditor::paint (juce::Graphics& g)
