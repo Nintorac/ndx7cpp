@@ -34,10 +34,17 @@ void DX7CustomLookAndFeel::drawLinearSlider(juce::Graphics& g,
 {
     if (style == juce::Slider::LinearVertical && sliderTrackImage.isValid())
     {
-        // Calculate the slider track area
-        auto trackBounds = juce::Rectangle<int>(x, y, width, height);
+        // Calculate track width and height maintaining aspect ratio
+        auto imageAspect = static_cast<float>(sliderTrackImage.getWidth()) / sliderTrackImage.getHeight();
+        auto trackWidth = width;
+        auto trackHeight = static_cast<int>(trackWidth / imageAspect);
 
-        // Draw the track image stretched to fit
+        // Center the track vertically if it's shorter than available height
+        auto trackY = y + (height - trackHeight) / 2;
+
+        auto trackBounds = juce::Rectangle<int>(x, trackY, trackWidth, trackHeight);
+
+        // Draw the track image maintaining aspect ratio
         g.drawImage(sliderTrackImage,
                    trackBounds.toFloat(),
                    juce::RectanglePlacement::stretchToFit);

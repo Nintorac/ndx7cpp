@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "AssetsData.h"
 
 //==============================================================================
 // CustomiseTab Implementation
@@ -50,13 +51,7 @@ CustomiseTab::~CustomiseTab()
 
 void CustomiseTab::paint(juce::Graphics& g)
 {
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-    
-    g.setColour(juce::Colours::white);
-    g.setFont(12.0f);
-    
-    g.drawText("Control the neural model's latent space to generate DX7 patches", 
-               10, getHeight() - 30, getWidth() - 20, 20, juce::Justification::centred);
+    // Don't fill background - let the main background image show through
 }
 
 void CustomiseTab::resized()
@@ -132,7 +127,7 @@ RandomiseTab::~RandomiseTab()
 
 void RandomiseTab::paint(juce::Graphics& g)
 {
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+    // Don't fill background - let the main background image show through
 }
 
 void RandomiseTab::resized()
@@ -153,11 +148,30 @@ void RandomiseTab::buttonClicked(juce::Button* button)
 NeuralDX7PatchGeneratorEditor::NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGeneratorProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
+    // Load background image
+    backgroundImage = juce::ImageCache::getFromMemory(
+        AssetsData::background_jpg,
+        AssetsData::background_jpgSize
+    );
+
     // Create title label
-    titleLabel = std::make_unique<juce::Label>("title", "NeuralDX7 Patch Generator");
-    titleLabel->setFont(juce::Font(20.0f, juce::Font::bold));
+    titleLabel = std::make_unique<juce::Label>("title", "Neural DX7 Patch Generator");
+    titleLabel->setFont(juce::Font(24.0f, juce::Font::bold));
     titleLabel->setJustificationType(juce::Justification::centred);
+    titleLabel->setColour(juce::Label::textColourId, juce::Colours::white);
     addAndMakeVisible(*titleLabel);
+
+    // Create OPTIONS button
+    optionsButton = std::make_unique<juce::ImageButton>("Options");
+    auto optionsImage = juce::ImageCache::getFromMemory(
+        AssetsData::global_options_png,
+        AssetsData::global_options_pngSize
+    );
+    optionsButton->setImages(true, true, true,
+                            optionsImage, 1.0f, juce::Colours::transparentBlack,
+                            optionsImage, 0.8f, juce::Colours::transparentBlack,
+                            optionsImage, 0.6f, juce::Colours::transparentBlack);
+    addAndMakeVisible(*optionsButton);
 
     // Create tabs
     customiseTab = std::make_unique<CustomiseTab>(audioProcessor);
@@ -165,13 +179,13 @@ NeuralDX7PatchGeneratorEditor::NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGene
 
     // Create custom tabbed component
     tabbedComponent = std::make_unique<DX7TabbedComponent>();
-    tabbedComponent->addTab("Randomise", juce::Colours::lightgrey, randomiseTab.get(), false);
-    tabbedComponent->addTab("Customise", juce::Colours::lightgrey, customiseTab.get(), false);
+    tabbedComponent->addTab("Randomise", juce::Colours::transparentBlack, randomiseTab.get(), false);
+    tabbedComponent->addTab("Customise", juce::Colours::transparentBlack, customiseTab.get(), false);
 
     addAndMakeVisible(*tabbedComponent);
 
     // Call setSize() LAST after all components are initialized
-    setSize (600, 400);
+    setSize (960, 540);
 }
 
 NeuralDX7PatchGeneratorEditor::~NeuralDX7PatchGeneratorEditor()
@@ -180,18 +194,36 @@ NeuralDX7PatchGeneratorEditor::~NeuralDX7PatchGeneratorEditor()
 
 void NeuralDX7PatchGeneratorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    // Draw background image
+    if (backgroundImage.isValid())
+    {
+        g.drawImage(backgroundImage,
+                   getLocalBounds().toFloat(),
+                   juce::RectanglePlacement::stretchToFit);
+    }
+    else
+    {
+        // Fallback to solid color if image fails to load
+        g.fillAll(juce::Colour(0xff3a2f2f));
+    }
 }
 
 void NeuralDX7PatchGeneratorEditor::resized()
 {
     auto bounds = getLocalBounds();
-    
-    // Title
-    titleLabel->setBounds(bounds.removeFromTop(40).reduced(10));
-    
-    bounds.removeFromTop(5); // spacing
-    
+
+    // Reserve top 18% for header area
+    auto headerHeight = static_cast<int>(bounds.getHeight() * 0.18f);
+    auto headerArea = bounds.removeFromTop(headerHeight);
+
+    // OPTIONS button - 5% of total height, in top-left corner
+    auto optionsHeight = static_cast<int>(bounds.getHeight() * 0.035f);
+    auto optionsWidth = optionsHeight * 6; // Maintain aspect ratio (202:35 ≈ 5.77:1)
+    optionsButton->setBounds(10, 10, optionsWidth, optionsHeight);
+
+    // Title centered in remaining header area
+    titleLabel->setBounds(headerArea.withTrimmedLeft(20).withTrimmedTop(10));
+
     // Tabbed component takes the rest of the space
     tabbedComponent->setBounds(bounds);
 }
