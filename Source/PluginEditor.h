@@ -2,15 +2,8 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
-
-class FullWidthLookAndFeel : public juce::LookAndFeel_V4
-{
-public:
-    int getTabButtonBestWidth(juce::TabBarButton& button, int tabDepth) override
-    {
-        return button.getTabbedButtonBar().getWidth() / button.getTabbedButtonBar().getNumTabs();
-    }
-};
+#include "DX7CustomLookAndFeel.h"
+#include "DX7TabComponents.h"
 
 class CustomiseTab : public juce::Component,
                      public juce::Slider::Listener,
@@ -22,19 +15,21 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
-    
+
     void sliderValueChanged (juce::Slider* slider) override;
     void buttonClicked (juce::Button* button) override;
 
 private:
     NeuralDX7PatchGeneratorProcessor& audioProcessor;
-    
+
+    DX7CustomLookAndFeel customLookAndFeel;
+
     std::vector<std::unique_ptr<juce::Slider>> latentSliders;
     std::vector<std::unique_ptr<juce::Label>> latentLabels;
-    
-    std::unique_ptr<juce::TextButton> generateButton;
-    std::unique_ptr<juce::TextButton> randomizeButton;
-    
+
+    std::unique_ptr<juce::ImageButton> generateButton;
+    std::unique_ptr<juce::ImageButton> randomizeButton;
+
     void updateLatentValues();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CustomiseTab)
@@ -49,12 +44,12 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
-    
+
     void buttonClicked (juce::Button* button) override;
 
 private:
     NeuralDX7PatchGeneratorProcessor& audioProcessor;
-    std::unique_ptr<juce::TextButton> randomiseButton;
+    std::unique_ptr<juce::ImageButton> randomiseButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RandomiseTab)
 };
@@ -70,10 +65,11 @@ public:
 
 private:
     NeuralDX7PatchGeneratorProcessor& audioProcessor;
-    
-    FullWidthLookAndFeel customLookAndFeel;
-    std::unique_ptr<juce::Label> titleLabel;
-    std::unique_ptr<juce::TabbedComponent> tabbedComponent;
+
+    juce::Image backgroundImage;
+
+    std::unique_ptr<juce::ImageButton> optionsButton;
+    std::unique_ptr<DX7TabbedComponent> tabbedComponent;
     std::unique_ptr<CustomiseTab> customiseTab;
     std::unique_ptr<RandomiseTab> randomiseTab;
 
