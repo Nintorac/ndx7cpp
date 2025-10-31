@@ -1,4 +1,4 @@
-#include "DX7CustomLookAndFeel.h"
+ #include "DX7CustomLookAndFeel.h"
 #include "AssetsData.h"
 
 DX7CustomLookAndFeel::DX7CustomLookAndFeel()
@@ -100,4 +100,28 @@ int DX7CustomLookAndFeel::getSliderThumbRadius(juce::Slider& slider)
         return sliderKnobImage.getHeight() / 2;
 
     return LookAndFeel_V4::getSliderThumbRadius(slider);
+}
+
+juce::Label* DX7CustomLookAndFeel::createSliderTextBox(juce::Slider& slider)
+{
+    auto* label = LookAndFeel_V4::createSliderTextBox(slider);
+
+    // Load embedded DSEG7 Classic font
+    auto typeface = juce::Typeface::createSystemTypefaceFor(
+        AssetsData::DSEG7ClassicRegular_ttf,
+        AssetsData::DSEG7ClassicRegular_ttfSize
+    );
+
+    // Apply the 7-segment display font
+    label->setFont(juce::Font(typeface).withHeight(14.0f));
+
+    // Right-align text to prevent jumping
+    label->setJustificationType(juce::Justification::centredRight);
+
+    // Style for LED display appearance
+    label->setColour(juce::Label::textColourId, juce::Colour(0xff940034)); // Red LED
+    label->setColour(juce::Label::backgroundColourId, juce::Colour(0xff000000)); // Black background
+    label->setColour(juce::Label::outlineColourId, juce::Colours::transparentBlack);
+
+    return label;
 }

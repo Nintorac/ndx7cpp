@@ -27,6 +27,8 @@ public:
 
     int getSliderThumbRadius(juce::Slider& slider) override;
 
+    juce::Label* createSliderTextBox(juce::Slider& slider) override;
+
 private:
     juce::Image sliderTrackImage;
     juce::Image sliderKnobImage;
