@@ -111,15 +111,26 @@ To use a real trained model instead of the dummy:
    ```python
    import torch
    from agoge import InferenceWorker
-   
+
    # Load your trained model
    model = InferenceWorker('hasty-copper-dogfish', 'dx7-vae', with_data=False).model
-   
+
    # Convert to TorchScript
    scripted_model = torch.jit.script(model)
-   
+
    # Save the scripted model
    scripted_model.save('dx7_vae_model.pt')
    ```
 
 3. Replace the dummy model file with the real one.
+
+## Acknowledgements
+
+This project uses the **DSEG7 Classic** font by keshikan for the 7-segment LED display styling:
+- Font: DSEG7 Classic Regular
+- Author: keshikan
+- Website: https://www.keshikan.net/fonts-e.html
+- GitHub: https://github.com/keshikan/DSEG
+- License: SIL Open Font License 1.1
+
+The DSEG font family provides authentic 7-segment and 14-segment display typefaces for digital display aesthetics.

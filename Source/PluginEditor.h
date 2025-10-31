@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
 #include "DX7CustomLookAndFeel.h"
+#include "DX7LatentSlider.h"
 #include "DX7TabComponents.h"
 
 class CustomiseTab : public juce::Component,
@@ -24,8 +25,7 @@ private:
 
     DX7CustomLookAndFeel customLookAndFeel;
 
-    std::vector<std::unique_ptr<juce::Slider>> latentSliders;
-    std::vector<std::unique_ptr<juce::Label>> latentLabels;
+    std::vector<std::unique_ptr<DX7LatentSlider>> latentSliders;
 
     std::unique_ptr<juce::ImageButton> generateButton;
     std::unique_ptr<juce::ImageButton> randomizeButton;

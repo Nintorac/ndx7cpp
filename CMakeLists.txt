@@ -59,14 +59,13 @@ juce_add_binary_data(AssetsData
     HEADER_NAME "AssetsData.h"
     NAMESPACE AssetsData
     SOURCES
-        asssets/background.jpg
+        asssets/background.png
         asssets/customise_generate_pressed.png
         asssets/customise_generate_unpressed.png
         asssets/customise_randomise_pressed.png
         asssets/customise_randomise_unpressed.png
         asssets/customise_slider_knob.png
         asssets/customise_slider_track.png
-        asssets/global_options.png
         asssets/randomise_cart.png
         asssets/tab_customise_selected_pressed.png
         asssets/tab_customise_selected_unpressed.png
@@ -76,6 +75,7 @@ juce_add_binary_data(AssetsData
         asssets/tab_randomise_selected_unpressed.png
         asssets/tab_randomise_unselected_pressed.png
         asssets/tab_randomise_unselected_unpressed.png
+        asssets/DSEG7Classic-Regular.ttf
 )
 
 # Create the plugin target
@@ -119,6 +119,7 @@ target_sources(NeuralDX7PatchGenerator
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
         Source/DX7CustomLookAndFeel.cpp
+        Source/DX7LatentSlider.cpp
         Source/DX7TabComponents.cpp
         Source/DX7Voice.cpp
         Source/DX7VoicePacker.cpp

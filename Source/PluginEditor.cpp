@@ -11,22 +11,11 @@ CustomiseTab::CustomiseTab(NeuralDX7PatchGeneratorProcessor& processor)
 {
     // Create latent dimension sliders
     latentSliders.resize(NeuralModelWrapper::LATENT_DIM);
-    latentLabels.resize(NeuralModelWrapper::LATENT_DIM);
-    
-    for (int i = 0; i < NeuralModelWrapper::LATENT_DIM; ++i) {
-        latentSliders[i] = std::make_unique<juce::Slider>();
-        latentSliders[i]->setRange(-3.0, 3.0, 0.01);
-        latentSliders[i]->setValue(0.0);
-        latentSliders[i]->setSliderStyle(juce::Slider::LinearVertical);
-        latentSliders[i]->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
-        latentSliders[i]->setLookAndFeel(&customLookAndFeel);
-        latentSliders[i]->addListener(this);
-        addAndMakeVisible(*latentSliders[i]);
 
-        latentLabels[i] = std::make_unique<juce::Label>("label" + juce::String(i), "Z" + juce::String(i + 1));
-        latentLabels[i]->setJustificationType(juce::Justification::centred);
-        latentLabels[i]->setColour(juce::Label::textColourId, juce::Colours::white);
-        addAndMakeVisible(*latentLabels[i]);
+    for (int i = 0; i < NeuralModelWrapper::LATENT_DIM; ++i) {
+        latentSliders[i] = std::make_unique<DX7LatentSlider>("Z" + juce::String(i + 1), customLookAndFeel);
+        latentSliders[i]->getSlider().addListener(this);
+        addAndMakeVisible(*latentSliders[i]);
     }
     
     // Create Generate button
@@ -66,12 +55,7 @@ CustomiseTab::CustomiseTab(NeuralDX7PatchGeneratorProcessor& processor)
 
 CustomiseTab::~CustomiseTab()
 {
-    // Reset LookAndFeel to avoid dangling pointers
-    for (auto& slider : latentSliders)
-    {
-        if (slider)
-            slider->setLookAndFeel(nullptr);
-    }
+    // Cleanup handled by DX7LatentSlider destructor
 }
 
 void CustomiseTab::paint(juce::Graphics& g)
@@ -87,13 +71,19 @@ void CustomiseTab::resized()
 
     // Sliders area - use most of the vertical space
     auto sliderArea = bounds.removeFromTop(bounds.getHeight() - 80); // Reserve 80px for buttons
-    int sliderWidth = sliderArea.getWidth() / NeuralModelWrapper::LATENT_DIM;
 
-    for (int i = 0; i < NeuralModelWrapper::LATENT_DIM; ++i) {
-        auto sliderBounds = sliderArea.removeFromLeft(sliderWidth).reduced(5);
-        latentLabels[i]->setBounds(sliderBounds.removeFromTop(20));
-        latentSliders[i]->setBounds(sliderBounds);
+    // Create horizontal flexbox for all slider columns
+    juce::FlexBox horizontalBox;
+    horizontalBox.flexDirection = juce::FlexBox::Direction::row;
+    horizontalBox.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
+
+    for (auto& sliderComponent : latentSliders) {
+        horizontalBox.items.add(juce::FlexItem(*sliderComponent)
+            .withFlex(1.0f)
+            .withMargin(5));
     }
+
+    horizontalBox.performLayout(sliderArea.toFloat());
 
     bounds.removeFromTop(10); // spacing between sliders and buttons
 
@@ -122,8 +112,8 @@ void CustomiseTab::buttonClicked(juce::Button* button)
     else if (button == randomizeButton.get()) {
         std::cout << "Randomize button clicked!" << std::endl;
         juce::Random random;
-        for (auto& slider : latentSliders) {
-            slider->setValue(random.nextFloat() * 6.0f - 3.0f); // Range -3 to 3
+        for (auto& sliderComponent : latentSliders) {
+            sliderComponent->getSlider().setValue(random.nextFloat() * 6.0f - 3.0f); // Range -3 to 3
         }
         updateLatentValues();
     }
@@ -133,11 +123,11 @@ void CustomiseTab::updateLatentValues()
 {
     std::vector<float> values;
     values.reserve(NeuralModelWrapper::LATENT_DIM);
-    
-    for (const auto& slider : latentSliders) {
-        values.push_back(static_cast<float>(slider->getValue()));
+
+    for (const auto& sliderComponent : latentSliders) {
+        values.push_back(static_cast<float>(sliderComponent->getSlider().getValue()));
     }
-    
+
     audioProcessor.setLatentValues(values);
 }
 
