@@ -231,6 +231,11 @@ void NeuralDX7PatchGeneratorEditor::resized()
     auto headerHeight = static_cast<int>(bounds.getHeight() * 0.18f);
     bounds.removeFromTop(headerHeight);
 
+    // Add 2.5% margin around the tabbed component
+    auto marginX = static_cast<int>(bounds.getWidth() * 0.025f);
+    auto marginY = static_cast<int>(bounds.getHeight() * 0.025f);
+    bounds.reduce(marginX, marginY);
+
     // Tabbed component takes the rest of the space
     tabbedComponent->setBounds(bounds);
 }

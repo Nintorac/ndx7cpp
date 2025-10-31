@@ -11,6 +11,8 @@ public:
 
     int getBestTabLength(int depth) override;
 
+    float getImageAspectRatio() const;
+
 private:
     juce::Image selectedPressedImage;
     juce::Image selectedUnpressedImage;
