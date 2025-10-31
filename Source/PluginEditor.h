@@ -68,7 +68,6 @@ private:
 
     juce::Image backgroundImage;
 
-    std::unique_ptr<juce::ImageButton> optionsButton;
     std::unique_ptr<DX7TabbedComponent> tabbedComponent;
     std::unique_ptr<CustomiseTab> customiseTab;
     std::unique_ptr<RandomiseTab> randomiseTab;
