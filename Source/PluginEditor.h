@@ -62,11 +62,14 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    bool keyPressed (const juce::KeyPress& key) override;
 
 private:
     NeuralDX7PatchGeneratorProcessor& audioProcessor;
 
-    juce::Image backgroundImage;
+    juce::Image headerImage;
+    std::vector<juce::Image> backgroundImages;
+    int currentBackgroundIndex;
 
     std::unique_ptr<DX7TabbedComponent> tabbedComponent;
     std::unique_ptr<CustomiseTab> customiseTab;

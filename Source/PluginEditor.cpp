@@ -180,12 +180,31 @@ void RandomiseTab::buttonClicked(juce::Button* button)
 }
 
 NeuralDX7PatchGeneratorEditor::NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGeneratorProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+    : AudioProcessorEditor (&p), audioProcessor (p), currentBackgroundIndex(0)
 {
-    // Load background image
-    backgroundImage = juce::ImageCache::getFromMemory(
-        AssetsData::background_png,
-        AssetsData::background_pngSize
+    // Load header image
+    headerImage = juce::ImageCache::getFromMemory(
+        AssetsData::global_header_png,
+        AssetsData::global_header_pngSize
+    );
+
+    // Load all background images
+    backgroundImages.resize(4);
+    backgroundImages[0] = juce::ImageCache::getFromMemory(
+        AssetsData::background0_png,
+        AssetsData::background0_pngSize
+    );
+    backgroundImages[1] = juce::ImageCache::getFromMemory(
+        AssetsData::background1_png,
+        AssetsData::background1_pngSize
+    );
+    backgroundImages[2] = juce::ImageCache::getFromMemory(
+        AssetsData::background2_png,
+        AssetsData::background2_pngSize
+    );
+    backgroundImages[3] = juce::ImageCache::getFromMemory(
+        AssetsData::background3_png,
+        AssetsData::background3_pngSize
     );
 
     // Create tabs
@@ -199,6 +218,9 @@ NeuralDX7PatchGeneratorEditor::NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGene
 
     addAndMakeVisible(*tabbedComponent);
 
+    // Enable keyboard focus to receive key events
+    setWantsKeyboardFocus(true);
+
     // Call setSize() LAST after all components are initialized
     setSize (960, 540);
 }
@@ -209,10 +231,11 @@ NeuralDX7PatchGeneratorEditor::~NeuralDX7PatchGeneratorEditor()
 
 void NeuralDX7PatchGeneratorEditor::paint (juce::Graphics& g)
 {
-    // Draw background image
-    if (backgroundImage.isValid())
+    // Draw current background image
+    if (currentBackgroundIndex >= 0 && currentBackgroundIndex < backgroundImages.size()
+        && backgroundImages[currentBackgroundIndex].isValid())
     {
-        g.drawImage(backgroundImage,
+        g.drawImage(backgroundImages[currentBackgroundIndex],
                    getLocalBounds().toFloat(),
                    juce::RectanglePlacement::stretchToFit);
     }
@@ -220,6 +243,26 @@ void NeuralDX7PatchGeneratorEditor::paint (juce::Graphics& g)
     {
         // Fallback to solid color if image fails to load
         g.fillAll(juce::Colour(0xff3a2f2f));
+    }
+
+    // Draw header image with 2.5% margin from top and left, scaled to 66% of editor width
+    if (headerImage.isValid())
+    {
+        auto bounds = getLocalBounds();
+        auto marginX = static_cast<int>(bounds.getWidth() * 0.025f);
+        auto marginY = static_cast<int>(bounds.getHeight() * 0.025f);
+
+        // Calculate header size: 66% of editor width, maintain aspect ratio
+        auto headerWidth = static_cast<int>(bounds.getWidth() * 0.66f);
+        auto aspectRatio = static_cast<float>(headerImage.getHeight()) / static_cast<float>(headerImage.getWidth());
+        auto headerHeight = static_cast<int>(headerWidth * aspectRatio);
+
+        // Position header at 2.5% from top and left
+        auto headerBounds = juce::Rectangle<int>(marginX, marginY, headerWidth, headerHeight);
+
+        g.drawImage(headerImage,
+                   headerBounds.toFloat(),
+                   juce::RectanglePlacement::stretchToFit);
     }
 }
 
@@ -238,4 +281,18 @@ void NeuralDX7PatchGeneratorEditor::resized()
 
     // Tabbed component takes the rest of the space
     tabbedComponent->setBounds(bounds);
+}
+
+bool NeuralDX7PatchGeneratorEditor::keyPressed (const juce::KeyPress& key)
+{
+    // Check if 'b' key is pressed
+    if (key.getKeyCode() == 'b' || key.getKeyCode() == 'B')
+    {
+        // Cycle to next background
+        currentBackgroundIndex = (currentBackgroundIndex + 1) % backgroundImages.size();
+        repaint(); // Redraw with new background
+        return true; // Key was handled
+    }
+
+    return false; // Key not handled
 }

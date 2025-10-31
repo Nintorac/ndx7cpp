@@ -59,7 +59,11 @@ juce_add_binary_data(AssetsData
     HEADER_NAME "AssetsData.h"
     NAMESPACE AssetsData
     SOURCES
-        asssets/background.png
+        asssets/global_header.png
+        asssets/background0.png
+        asssets/background1.png
+        asssets/background2.png
+        asssets/background3.png
         asssets/customise_generate_pressed.png
         asssets/customise_generate_unpressed.png
         asssets/customise_randomise_pressed.png
@@ -86,7 +90,7 @@ juce_add_plugin(NeuralDX7PatchGenerator
     NEEDS_MIDI_OUTPUT TRUE
     IS_MIDI_PLUGIN TRUE
     IS_MIDI_EFFECT TRUE
-    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS TRUE
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE NinA
     PLUGIN_CODE NeuD
