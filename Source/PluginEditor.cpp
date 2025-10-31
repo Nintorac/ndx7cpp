@@ -194,21 +194,9 @@ NeuralDX7PatchGeneratorEditor::NeuralDX7PatchGeneratorEditor (NeuralDX7PatchGene
 {
     // Load background image
     backgroundImage = juce::ImageCache::getFromMemory(
-        AssetsData::background_jpg,
-        AssetsData::background_jpgSize
+        AssetsData::background_png,
+        AssetsData::background_pngSize
     );
-
-    // Create OPTIONS button
-    optionsButton = std::make_unique<juce::ImageButton>("Options");
-    auto optionsImage = juce::ImageCache::getFromMemory(
-        AssetsData::global_options_png,
-        AssetsData::global_options_pngSize
-    );
-    optionsButton->setImages(true, true, true,
-                            optionsImage, 1.0f, juce::Colours::transparentBlack,
-                            optionsImage, 0.8f, juce::Colours::transparentBlack,
-                            optionsImage, 0.6f, juce::Colours::transparentBlack);
-    addAndMakeVisible(*optionsButton);
 
     // Create tabs
     customiseTab = std::make_unique<CustomiseTab>(audioProcessor);
@@ -252,11 +240,6 @@ void NeuralDX7PatchGeneratorEditor::resized()
     // Reserve top 18% for header area
     auto headerHeight = static_cast<int>(bounds.getHeight() * 0.18f);
     bounds.removeFromTop(headerHeight);
-
-    // OPTIONS button - 3.5% of total height, in top-left corner
-    auto optionsHeight = static_cast<int>(getHeight() * 0.035f);
-    auto optionsWidth = optionsHeight * 6; // Maintain aspect ratio (202:35 ≈ 5.77:1)
-    optionsButton->setBounds(10, 10, optionsWidth, optionsHeight);
 
     // Tabbed component takes the rest of the space
     tabbedComponent->setBounds(bounds);
