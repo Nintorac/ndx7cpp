@@ -70,6 +70,7 @@ juce_add_binary_data(AssetsData
         asssets/customise_randomise_unpressed.png
         asssets/customise_slider_knob.png
         asssets/customise_slider_track.png
+        asssets/customise_7_seg_background.png
         asssets/randomise_cart.png
         asssets/tab_customise_selected_pressed.png
         asssets/tab_customise_selected_unpressed.png
