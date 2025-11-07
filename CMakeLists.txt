@@ -123,9 +123,9 @@ target_sources(NeuralDX7PatchGenerator
     PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
-        Source/DX7CustomLookAndFeel.cpp
-        Source/DX7LatentSlider.cpp
-        Source/DX7TabComponents.cpp
+        Source/UI/DX7CustomLookAndFeel.cpp
+        Source/UI/DX7LatentSlider.cpp
+        Source/UI/DX7TabComponents.cpp
         Source/DX7Voice.cpp
         Source/DX7VoicePacker.cpp
         Source/DX7BulkPacker.cpp
