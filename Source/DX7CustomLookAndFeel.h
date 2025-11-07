@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "UI/SevenSegmentLabel.h"
 
 class DX7CustomLookAndFeel : public juce::LookAndFeel_V4
 {
@@ -32,4 +33,5 @@ public:
 private:
     juce::Image sliderTrackImage;
     juce::Image sliderKnobImage;
+    juce::Image sevenSegBackgroundImage;
 };
