@@ -2,9 +2,9 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
-#include "DX7CustomLookAndFeel.h"
-#include "DX7LatentSlider.h"
-#include "DX7TabComponents.h"
+#include "UI/DX7CustomLookAndFeel.h"
+#include "UI/DX7LatentSlider.h"
+#include "UI/DX7TabComponents.h"
 
 class CustomiseTab : public juce::Component,
                      public juce::Slider::Listener,
