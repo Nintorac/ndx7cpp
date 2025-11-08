@@ -2,7 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
-#include "UI/DX7CustomLookAndFeel.h"
+#include "UI/DX7LatentSliderLookAndFeel.h"
 #include "UI/DX7LatentSlider.h"
 #include "UI/DX7TabComponents.h"
 
@@ -23,7 +23,7 @@ public:
 private:
     NeuralDX7PatchGeneratorProcessor& audioProcessor;
 
-    DX7CustomLookAndFeel customLookAndFeel;
+    DX7LatentSliderLookAndFeel customLookAndFeel;
 
     std::vector<std::unique_ptr<DX7LatentSlider>> latentSliders;
 

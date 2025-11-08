@@ -120,6 +120,15 @@ float DX7TabButton::getImageAspectRatio() const
 DX7TabbedComponent::DX7TabbedComponent()
     : TabbedComponent(juce::TabbedButtonBar::TabsAtTop)
 {
+    // Remove the outline/border around the tabbed component
+    setOutline(0);
+
+    // Remove the line under the tab buttons
+    getTabbedButtonBar().setMinimumTabScaleFactor(0.0f);
+
+    // Make tab bar background transparent
+    getLookAndFeel().setColour(juce::TabbedButtonBar::tabOutlineColourId, juce::Colours::transparentBlack);
+    getLookAndFeel().setColour(juce::TabbedComponent::outlineColourId, juce::Colours::transparentBlack);
 }
 
 void DX7TabbedComponent::resized()
@@ -146,41 +155,28 @@ void DX7TabbedComponent::resized()
     // Let JUCE do the initial layout
     TabbedComponent::resized();
 
-    // Now manually position tabs with custom distribution
-    // With 33% tabs, we have 34% space to distribute (100% - 66%)
-    // Distribution: equal spacing on left, middle, and right
+    // Use FlexBox to position tabs with equal spacing
     auto& tabBar = getTabbedButtonBar();
-    auto totalWidth = tabBar.getWidth();
-    auto barHeight = tabBar.getHeight();
     auto numTabs = getNumTabs();
 
     if (numTabs > 0)
     {
-        const float tabWidthPercent = 0.33f;
-        const float totalSpacing = 1.0f - (tabWidthPercent * 2.0f); // 34% total spacing
-        const float spacing = totalSpacing / 3.0f; // ~11.33% per gap (left, middle, right)
+        juce::FlexBox tabFlexBox;
+        tabFlexBox.flexDirection = juce::FlexBox::Direction::row;
+        tabFlexBox.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
 
-        auto tab1X = static_cast<int>(totalWidth * spacing);
-        auto tab1Width = static_cast<int>(totalWidth * tabWidthPercent);
-        auto tab2X = static_cast<int>(totalWidth * (spacing + tabWidthPercent + spacing));
-        auto tab2Width = static_cast<int>(totalWidth * tabWidthPercent);
-
-        // Position each tab manually
+        // Add each tab button to the flexbox with 33% width
         for (int i = 0; i < numTabs; ++i)
         {
             if (auto* button = tabBar.getTabButton(i))
             {
-                if (i == 0)
-                {
-                    button->setBounds(tab1X, 0, tab1Width, barHeight);
-                }
-                else if (i == 1)
-                {
-                    button->setBounds(tab2X, 0, tab2Width, barHeight);
-                }
-                // If more tabs are added, they would need additional positioning logic
+                tabFlexBox.items.add(juce::FlexItem(*button)
+                    .withFlex(0, 0, tabBar.getWidth() * 0.33f));
             }
         }
+
+        // Perform layout on the tab bar bounds
+        tabFlexBox.performLayout(tabBar.getLocalBounds().toFloat());
     }
 }
 

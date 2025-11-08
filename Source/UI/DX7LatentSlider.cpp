@@ -1,8 +1,15 @@
 #include "DX7LatentSlider.h"
+#include "AssetsData.h"
 
-DX7LatentSlider::DX7LatentSlider(const juce::String& labelText, DX7CustomLookAndFeel& lookAndFeel)
+DX7LatentSlider::DX7LatentSlider(const juce::String& labelText, DX7LatentSliderLookAndFeel& lookAndFeel)
     : customLookAndFeel(lookAndFeel)
 {
+    // Load 7-segment background image
+    backgroundImage = juce::ImageCache::getFromMemory(
+        AssetsData::customise_7_seg_background_png,
+        AssetsData::customise_7_seg_background_pngSize
+    );
+
     // Setup label
     label.setText(labelText, juce::dontSendNotification);
     label.setJustificationType(juce::Justification::centred);
@@ -25,7 +32,17 @@ DX7LatentSlider::~DX7LatentSlider()
 
 void DX7LatentSlider::paint(juce::Graphics& g)
 {
-    // Don't fill background - let the main background image show through
+    // Draw the 7-segment background image if available, matching slider width
+    if (backgroundImage.isValid())
+    {
+        auto bounds = getLocalBounds();
+        auto sliderWidth = slider.getWidth() + 10; // Match the width of the slider and its padding
+        auto imageX = (bounds.getWidth() - sliderWidth) / 2.0f;
+
+        g.drawImage(backgroundImage,
+                   juce::Rectangle<float>(imageX, 0.0f, sliderWidth, static_cast<float>(bounds.getHeight())),
+                   juce::RectanglePlacement::stretchToFit);
+    }
 }
 
 void DX7LatentSlider::resized()
@@ -41,14 +58,16 @@ void DX7LatentSlider::resized()
     // Label at top (fixed height)
     flexBox.items.add(juce::FlexItem(label)
         .withHeight(20.0f)
-        .withWidth(60.0f));
+        .withWidth(60.0f)
+    );
 
     // Slider in middle (flex grow to fill available space)
     // The slider's text box is positioned by JUCE based on setTextBoxStyle
     flexBox.items.add(juce::FlexItem(slider)
         .withFlex(1.0f)
         .withWidth(60.0f)
-        .withMargin(juce::FlexItem::Margin(5, 0, 0, 0)));
+        .withMargin(juce::FlexItem::Margin(0, 10, 0, 10))
+    );
 
     flexBox.performLayout(bounds.toFloat());
 }
