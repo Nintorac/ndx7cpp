@@ -80,7 +80,7 @@ juce_add_binary_data(AssetsData
         asssets/tab_randomise_selected_unpressed.png
         asssets/tab_randomise_unselected_pressed.png
         asssets/tab_randomise_unselected_unpressed.png
-        asssets/DSEG7Classic-Regular.ttf
+        asssets/DSEG7Classic-Bold.ttf
 )
 
 # Create the plugin target
@@ -123,7 +123,7 @@ target_sources(NeuralDX7PatchGenerator
     PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
-        Source/UI/DX7CustomLookAndFeel.cpp
+        Source/UI/DX7LatentSliderLookAndFeel.cpp
         Source/UI/DX7LatentSlider.cpp
         Source/UI/DX7TabComponents.cpp
         Source/DX7Voice.cpp

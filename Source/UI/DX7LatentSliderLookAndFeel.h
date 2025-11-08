@@ -1,12 +1,12 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "UI/SevenSegmentLabel.h"
+#include "SevenSegmentLabel.h"
 
-class DX7CustomLookAndFeel : public juce::LookAndFeel_V4
+class DX7LatentSliderLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
-    DX7CustomLookAndFeel();
+    DX7LatentSliderLookAndFeel();
 
     void drawLinearSlider(juce::Graphics& g,
                          int x, int y,

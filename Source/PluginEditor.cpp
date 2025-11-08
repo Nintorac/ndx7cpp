@@ -13,7 +13,10 @@ CustomiseTab::CustomiseTab(NeuralDX7PatchGeneratorProcessor& processor)
     latentSliders.resize(NeuralModelWrapper::LATENT_DIM);
 
     for (int i = 0; i < NeuralModelWrapper::LATENT_DIM; ++i) {
-        latentSliders[i] = std::make_unique<DX7LatentSlider>("Z" + juce::String(i + 1), customLookAndFeel);
+        // Unicode subscript 0 is U+2080, so subscript i is U+2080 + i
+        juce::String label = "Z" + juce::String::charToString(static_cast<juce::juce_wchar>(0x2080 + i));
+
+        latentSliders[i] = std::make_unique<DX7LatentSlider>(label, customLookAndFeel);
         latentSliders[i]->getSlider().addListener(this);
         addAndMakeVisible(*latentSliders[i]);
     }
@@ -67,35 +70,48 @@ void CustomiseTab::resized()
 {
     auto bounds = getLocalBounds();
 
-    bounds.removeFromTop(10); // spacing
+    // Main vertical flexbox containing sliders and buttons
+    juce::FlexBox mainVerticalBox;
+    mainVerticalBox.flexDirection = juce::FlexBox::Direction::column;
 
-    // Sliders area - use most of the vertical space
-    auto sliderArea = bounds.removeFromTop(bounds.getHeight() - 80); // Reserve 80px for buttons
-
-    // Create horizontal flexbox for all slider columns
-    juce::FlexBox horizontalBox;
-    horizontalBox.flexDirection = juce::FlexBox::Direction::row;
-    horizontalBox.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
+    // Horizontal flexbox for sliders
+    juce::FlexBox slidersBox;
+    slidersBox.flexDirection = juce::FlexBox::Direction::row;
+    slidersBox.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
 
     for (auto& sliderComponent : latentSliders) {
-        horizontalBox.items.add(juce::FlexItem(*sliderComponent)
+        slidersBox.items.add(juce::FlexItem(*sliderComponent)
             .withFlex(1.0f)
-            .withMargin(5));
+            .withMargin(5)
+            );
     }
 
-    horizontalBox.performLayout(sliderArea.toFloat());
+    // Horizontal flexbox for buttons
+    juce::FlexBox buttonsBox;
+    buttonsBox.flexDirection = juce::FlexBox::Direction::row;
+    buttonsBox.justifyContent = juce::FlexBox::JustifyContent::center;
 
-    bounds.removeFromTop(10); // spacing between sliders and buttons
+    buttonsBox.items.add(juce::FlexItem(*generateButton)
+        .withFlex(1.0f)
+        .withMargin(5)
+    );
 
-    // Buttons below the sliders - maintain aspect ratio (684:53 ≈ 12.9:1)
-    int buttonWidth = bounds.getWidth() / 2;
-    auto buttonHeight = static_cast<int>(buttonWidth / 12.9f);
+    buttonsBox.items.add(juce::FlexItem(*randomizeButton)
+        .withFlex(1.0f)
+        .withMargin(5)
+    );
 
-    auto generateBounds = bounds.removeFromLeft(buttonWidth).reduced(10);
-    generateButton->setBounds(generateBounds.withHeight(buttonHeight));
+    // Add sliders and buttons to main vertical box
+    mainVerticalBox.items.add(juce::FlexItem(slidersBox)
+        .withFlex(1.0f)
+        .withMargin(juce::FlexItem::Margin(10, 0, 0, 0))
+    );
 
-    auto randomizeBounds = bounds.reduced(10);
-    randomizeButton->setBounds(randomizeBounds.withHeight(buttonHeight));
+    mainVerticalBox.items.add(juce::FlexItem(buttonsBox)
+        .withHeight(40.0f)
+    );
+
+    mainVerticalBox.performLayout(bounds.toFloat());
 }
 
 void CustomiseTab::sliderValueChanged(juce::Slider* slider)
@@ -271,7 +287,7 @@ void NeuralDX7PatchGeneratorEditor::resized()
     auto bounds = getLocalBounds();
 
     // Reserve top 18% for header area
-    auto headerHeight = static_cast<int>(bounds.getHeight() * 0.18f);
+    auto headerHeight = static_cast<int>(bounds.getHeight() * 0.20f);
     bounds.removeFromTop(headerHeight);
 
     // Add 2.5% margin around the tabbed component

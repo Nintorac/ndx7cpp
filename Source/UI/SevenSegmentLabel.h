@@ -14,9 +14,9 @@ public:
         setKeyboardType(juce::TextInputTarget::decimalKeyboard);
         setEditable(false, false, false);
 
-        // Load and apply the 7-segment display font with bold styling
+        // Load and apply the 7-segment display font with bold styling and increased weight
         auto typeface = juce::Typeface::createSystemTypefaceFor(fontData, fontDataSize);
-        setFont(juce::Font(typeface).withHeight(14.0f).withStyle(juce::Font::bold));
+        setFont(juce::Font(typeface).withHeight(14.0f).withHorizontalScale(1.1f));
 
         // Style for LED display appearance
         setColour(juce::Label::textColourId, juce::Colour(0xff940034)); // Red LED

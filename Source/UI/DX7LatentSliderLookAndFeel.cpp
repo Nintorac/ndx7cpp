@@ -1,7 +1,7 @@
- #include "DX7CustomLookAndFeel.h"
+#include "DX7LatentSliderLookAndFeel.h"
 #include "AssetsData.h"
 
-DX7CustomLookAndFeel::DX7CustomLookAndFeel()
+DX7LatentSliderLookAndFeel::DX7LatentSliderLookAndFeel()
 {
     // Load slider images from embedded assets
     sliderTrackImage = juce::ImageCache::getFromMemory(
@@ -28,7 +28,7 @@ DX7CustomLookAndFeel::DX7CustomLookAndFeel()
     setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
 }
 
-void DX7CustomLookAndFeel::drawLinearSlider(juce::Graphics& g,
+void DX7LatentSliderLookAndFeel::drawLinearSlider(juce::Graphics& g,
                                            int x, int y,
                                            int width, int height,
                                            float sliderPos,
@@ -39,15 +39,17 @@ void DX7CustomLookAndFeel::drawLinearSlider(juce::Graphics& g,
 {
     if (style == juce::Slider::LinearVertical && sliderTrackImage.isValid())
     {
-        // Calculate track width and height maintaining aspect ratio
-        auto imageAspect = static_cast<float>(sliderTrackImage.getWidth()) / sliderTrackImage.getHeight();
-        auto trackWidth = width;
-        auto trackHeight = static_cast<int>(trackWidth / imageAspect);
+        // Calculate track scale factor based on height to fill full vertical space
+        auto trackScaleFactor = static_cast<float>(height) / sliderTrackImage.getHeight();
 
-        // Center the track vertically if it's shorter than available height
-        auto trackY = y + (height - trackHeight) / 2;
+        // Calculate track height and width maintaining aspect ratio
+        auto trackHeight = height;
+        auto trackWidth = static_cast<int>(sliderTrackImage.getWidth() * trackScaleFactor);
 
-        auto trackBounds = juce::Rectangle<int>(x, trackY, trackWidth, trackHeight);
+        // Center the track horizontally if it's narrower than available width
+        auto trackX = x + (width - trackWidth) / 2;
+
+        auto trackBounds = juce::Rectangle<int>(trackX, y, trackWidth, trackHeight);
 
         // Draw the track image maintaining aspect ratio
         g.drawImage(sliderTrackImage,
@@ -66,7 +68,7 @@ void DX7CustomLookAndFeel::drawLinearSlider(juce::Graphics& g,
     }
 }
 
-void DX7CustomLookAndFeel::drawLinearSliderThumb(juce::Graphics& g,
+void DX7LatentSliderLookAndFeel::drawLinearSliderThumb(juce::Graphics& g,
                                                 int x, int y,
                                                 int width, int height,
                                                 float sliderPos,
@@ -75,19 +77,22 @@ void DX7CustomLookAndFeel::drawLinearSliderThumb(juce::Graphics& g,
                                                 juce::Slider::SliderStyle style,
                                                 juce::Slider& slider)
 {
-    if (style == juce::Slider::LinearVertical && sliderKnobImage.isValid())
+    if (style == juce::Slider::LinearVertical && sliderKnobImage.isValid() && sliderTrackImage.isValid())
     {
-        // Calculate knob dimensions - scale to half the width of the track
-        auto targetKnobWidth = width / 2.0f;
-        auto knobHeight = sliderKnobImage.getHeight() * (targetKnobWidth / sliderKnobImage.getWidth());
+        // Calculate the same scale factor as used for the track
+        auto trackScaleFactor = static_cast<float>(width) / sliderTrackImage.getWidth();
 
-        // Align knob to the left edge (same as track)
-        auto knobX = static_cast<float>(x);
+        // Calculate knob dimensions using the same scale factor as the track
+        auto knobWidth = sliderKnobImage.getWidth() * trackScaleFactor;
+        auto knobHeight = sliderKnobImage.getHeight() * trackScaleFactor;
+
+        // Center knob at 1/4 of the track width
+        auto knobX = static_cast<float>(x) + (width / 4.0f) - (knobWidth / 2.0f);
         auto knobY = sliderPos - knobHeight / 2.0f;
 
-        // Draw the knob image scaled to half width
+        // Draw the knob image with same scale factor as track
         g.drawImage(sliderKnobImage,
-                   juce::Rectangle<float>(knobX, knobY, targetKnobWidth, knobHeight),
+                   juce::Rectangle<float>(knobX, knobY, knobWidth, knobHeight),
                    juce::RectanglePlacement::stretchToFit);
     }
     else
@@ -98,7 +103,7 @@ void DX7CustomLookAndFeel::drawLinearSliderThumb(juce::Graphics& g,
     }
 }
 
-int DX7CustomLookAndFeel::getSliderThumbRadius(juce::Slider& slider)
+int DX7LatentSliderLookAndFeel::getSliderThumbRadius(juce::Slider& slider)
 {
     // Return the height of the knob image
     if (sliderKnobImage.isValid())
@@ -107,11 +112,11 @@ int DX7CustomLookAndFeel::getSliderThumbRadius(juce::Slider& slider)
     return LookAndFeel_V4::getSliderThumbRadius(slider);
 }
 
-juce::Label* DX7CustomLookAndFeel::createSliderTextBox(juce::Slider& slider)
+juce::Label* DX7LatentSliderLookAndFeel::createSliderTextBox(juce::Slider& slider)
 {
     return new SevenSegmentLabel(
         sevenSegBackgroundImage,
-        AssetsData::DSEG7ClassicRegular_ttf,
-        AssetsData::DSEG7ClassicRegular_ttfSize
+        AssetsData::DSEG7ClassicBold_ttf,
+        AssetsData::DSEG7ClassicBold_ttfSize
     );
 }
